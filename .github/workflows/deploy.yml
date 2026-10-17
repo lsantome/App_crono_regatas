@@ -33,12 +33,23 @@ jobs:
           cp index.html manifest.webmanifest sw.js _site/
           cp icons/*.png _site/icons/
 
-      - name: Sellar la versión del service worker
+      - name: Sellar la versión (service worker y pantalla de la app)
         run: |
+          set -e
           BUILD_ID="${GITHUB_SHA::7}"
+          BUILD_DATE="$(date -u +%Y-%m-%d)"
           sed -i "s/^const CACHE_VERSION = .*/const CACHE_VERSION = '$BUILD_ID';/" _site/sw.js
-          echo "Versión de caché: $BUILD_ID"
-          grep -n "^const CACHE_VERSION" _site/sw.js
+          sed -i "s/^const APP_VERSION = .*/const APP_VERSION = '$BUILD_ID';/" _site/index.html
+          sed -i "s/^const APP_BUILD = .*/const APP_BUILD = '$BUILD_DATE';/" _site/index.html
+          # Si el sellado no ha surtido efecto, se detiene aquí: publicar sin
+          # versión haría imposible saber qué se está ejecutando.
+          grep -q "^const CACHE_VERSION = '$BUILD_ID';" _site/sw.js \
+            || { echo "::error::No se pudo sellar CACHE_VERSION en sw.js"; exit 1; }
+          grep -q "^const APP_VERSION = '$BUILD_ID';" _site/index.html \
+            || { echo "::error::No se pudo sellar APP_VERSION en index.html"; exit 1; }
+          grep -q "^const APP_BUILD = '$BUILD_DATE';" _site/index.html \
+            || { echo "::error::No se pudo sellar APP_BUILD en index.html"; exit 1; }
+          echo "Versión: $BUILD_ID ($BUILD_DATE)"
 
       - name: Comprobar que no falta nada
         run: |

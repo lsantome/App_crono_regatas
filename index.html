@@ -52,7 +52,8 @@
   .safe-bottom{padding-bottom:max(80px, env(safe-area-inset-bottom));}
 
   /* ---------- SETUP ---------- */
-  #screenSetup{max-width:920px;margin:0 auto;padding:24px 20px 0;}
+  #screenSetup{max-width:920px;margin:0 auto;
+    padding:max(24px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) 0 max(20px, env(safe-area-inset-left));}
   .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;
     padding-bottom:16px;border-bottom:2px solid var(--border);}
   .topbar h1{font-size:1.4rem;letter-spacing:.2px;margin:0;color:var(--text);font-weight:800;
@@ -108,7 +109,9 @@
   /* ---------- RACE SCREEN ---------- */
   #screenRace{display:none;flex-direction:column;height:100vh;height:100dvh;}
   #raceHeader{display:flex;align-items:center;justify-content:space-between;
-    padding:12px 16px;border-bottom:1px solid var(--border);background:var(--bg2);flex:0 0 auto;
+    padding:12px max(16px, env(safe-area-inset-right)) 12px max(16px, env(safe-area-inset-left));
+    padding-top:max(12px, env(safe-area-inset-top));
+    border-bottom:1px solid var(--border);background:var(--bg2);flex:0 0 auto;
     box-shadow:0 2px 8px rgba(0,0,0,.18);gap:10px;flex-wrap:wrap;}
   #raceHeader h2{margin:0;font-size:1.05rem;color:var(--text);font-weight:700;letter-spacing:.2px;}
   #raceHeader .hdrBtns{display:flex;gap:8px;flex-wrap:wrap;}
@@ -197,6 +200,20 @@
   table.anTable td:first-child, table.anTable th:first-child{text-align:left;position:sticky;left:0;background:var(--card);font-family:var(--font-ui);font-weight:600;}
   table.anTable tbody tr:nth-child(even) td:first-child{background:var(--card2);}
 
+  /* ---------- PANTALLA COMPLETA ---------- */
+  .topbarBtns{display:flex;gap:8px;align-items:center;}
+  #raceBody, #analysisScroll{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);}
+  .fsBtn{display:inline-flex;align-items:center;gap:7px;}
+  .fsBtn svg{flex:0 0 auto;display:block;}
+  .fsBtn .icoExit{display:none;}
+  .fsBtn.on .icoEnter{display:none;}
+  .fsBtn.on .icoExit{display:block;}
+  #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom));
+    z-index:310;display:none;max-width:min(440px, calc(100% - 28px));padding:12px 16px;border-radius:12px;
+    background:var(--panel);border:1px solid var(--border);box-shadow:0 8px 28px rgba(0,0,0,.28);
+    font-size:.88rem;line-height:1.4;color:var(--text);}
+  #toast.show{display:block;}
+
   /* ---------- AVISO DE ACTUALIZACIÓN ---------- */
   #updateBar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom));
     z-index:300;display:none;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;
@@ -210,7 +227,7 @@
   @media print{
     html,body{background:#fff !important;}
     body *{visibility:hidden;}
-    #updateBar{display:none !important;}
+    #updateBar, #toast{display:none !important;}
     #printArea, #printArea *{visibility:visible;}
     #printArea{display:block;position:absolute;left:0;top:0;width:100%;}
     @page{size:A4 landscape;margin:10mm;}
@@ -234,10 +251,12 @@
 
   /* ---------- MÓVIL (smartphone) ---------- */
   @media (max-width: 760px){
-    #screenSetup{padding:16px 14px 0;}
+    #screenSetup{padding:max(16px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 0 max(14px, env(safe-area-inset-left));}
     .row{gap:10px;}
     .field{min-width:0;flex:1 1 45%;}
     fieldset{padding:14px 12px 16px;}
+    .fsBtn .fsLabel{display:none;}
+    #raceHeader .fsBtn, .themeBtn.fsBtn{padding:8px 11px;}
     /* Fila de equipo: el nombre ocupa todo el ancho y debajo van "Mi equipo" y "Participa" */
     .teamRow{flex-wrap:wrap;row-gap:4px;column-gap:16px;margin-bottom:12px;}
     .teamRow input[type=text]{flex:1 1 100%;min-width:0;}
@@ -245,7 +264,7 @@
     .topbar h1{font-size:1.15rem;gap:9px;}
     .topbar .logo{width:48px;height:21px;}
 
-    #mobileTabs{display:flex;gap:6px;padding:8px 10px;background:var(--bg2);border-bottom:1px solid var(--border);flex:0 0 auto;}
+    #mobileTabs{display:flex;gap:6px;padding:8px max(10px, env(safe-area-inset-right)) 8px max(10px, env(safe-area-inset-left));background:var(--bg2);border-bottom:1px solid var(--border);flex:0 0 auto;}
     #mobileTabs button{flex:1;background:var(--card2);border:1px solid var(--border);color:var(--muted);
       border-radius:var(--radius-sm);padding:10px 8px;font-size:.82rem;font-weight:700;}
     #mobileTabs button.active{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
@@ -283,7 +302,10 @@
       </g>
       <path d="M2 14 C14 9.2 50 9.2 62 14 C50 18.8 14 18.8 2 14Z" fill="currentColor"/>
     </svg>Cronometraje de Regatas</h1>
-    <button class="themeBtn" onclick="toggleTheme()" id="themeBtnSetup">☾ Oscuro</button>
+    <div class="topbarBtns">
+      <button class="themeBtn fsBtn hidden" onclick="toggleFullscreen()" aria-pressed="false" title="Pantalla completa"><svg class="icoEnter" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><svg class="icoExit" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg><span class="fsLabel">Pantalla completa</span></button>
+      <button class="themeBtn" onclick="toggleTheme()" id="themeBtnSetup">☾ Oscuro</button>
+    </div>
   </div>
 
   <fieldset>
@@ -353,6 +375,7 @@
       <button onclick="openAnalysis()">📊 Análisis</button>
       <button id="excelBtn" onclick="exportExcel()">⬇ Excel</button>
       <button id="exportBtn" onclick="exportPDF()">⬇ Exportar PDF</button>
+      <button class="fsBtn hidden" onclick="toggleFullscreen()" aria-pressed="false" title="Pantalla completa"><svg class="icoEnter" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><svg class="icoExit" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg><span class="fsLabel">Pantalla completa</span></button>
       <button onclick="toggleTheme()" id="themeBtnRace">☾ Oscuro</button>
       <button onclick="resetAll()">↺ Nueva regata</button>
     </div>
@@ -380,6 +403,7 @@
   <div id="raceHeader">
     <h2>📊 Análisis de la regata</h2>
     <div class="hdrBtns">
+      <button class="fsBtn hidden" onclick="toggleFullscreen()" aria-pressed="false" title="Pantalla completa"><svg class="icoEnter" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><svg class="icoExit" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg><span class="fsLabel">Pantalla completa</span></button>
       <button onclick="toggleTheme()" id="themeBtnAnalysis">☾ Oscuro</button>
       <button onclick="closeAnalysis()">← Volver</button>
     </div>
@@ -388,6 +412,8 @@
     <div id="analysisContent"></div>
   </div>
 </div>
+
+<div id="toast" role="status" aria-live="polite"></div>
 
 <div id="updateBar" role="status">
   <span>Hay una versión nueva de la aplicación.</span>
@@ -1239,6 +1265,117 @@ function toggleTheme(){
 }
 
 /* ============================================================
+   AVISO BREVE (toast)
+   ============================================================ */
+let toastTimer = null;
+function showToast(msg, ms){
+  const el = document.getElementById('toast');
+  if(!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove('show'), ms || 6000);
+}
+
+/* ============================================================
+   PANTALLA COMPLETA
+   · Botón en las tres cabeceras (escritorio, Android, iPad).
+   · En pantallas táctiles se entra sola al primer toque. Los
+     navegadores NO permiten hacerlo al cargar la página: exigen un
+     gesto del usuario. Instalada como app, el manifest ya la abre
+     sin barras (display_override).
+   · La preferencia ('auto' | 'off') se recuerda. Solo la cambia el
+     botón: si sales a mano, no se vuelve a forzar.
+   · iPhone/Safari no ofrece esta API: el botón explica cómo
+     instalarla en la pantalla de inicio, que sí es pantalla completa.
+   ============================================================ */
+const FS_KEY = 'regatas.pantallaCompleta';
+
+function fsElement(){ return document.fullscreenElement || document.webkitFullscreenElement || null; }
+function fsSupported(){
+  const d = document, e = d.documentElement;
+  const enabled = d.fullscreenEnabled || d.webkitFullscreenEnabled;
+  return !!enabled && !!(e.requestFullscreen || e.webkitRequestFullscreen);
+}
+function isStandalone(){
+  try{
+    return window.matchMedia('(display-mode: standalone)').matches
+        || window.matchMedia('(display-mode: fullscreen)').matches
+        || window.navigator.standalone === true;
+  }catch(e){ return false; }
+}
+function isFullscreenDisplayMode(){
+  try{ return window.matchMedia('(display-mode: fullscreen)').matches; }catch(e){ return false; }
+}
+function isIOS(){
+  return /iPad|iPhone|iPod/.test(navigator.userAgent)
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+function isTouchDevice(){
+  try{ return window.matchMedia('(pointer: coarse)').matches; }catch(e){ return false; }
+}
+function fsPref(){ try{ return localStorage.getItem(FS_KEY); }catch(e){ return null; } }
+function fsSavePref(v){ try{ localStorage.setItem(FS_KEY, v); }catch(e){} }
+
+async function fsEnter(){
+  const el = document.documentElement;
+  try{
+    if(el.requestFullscreen) await el.requestFullscreen({navigationUI:'hide'});
+    else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    return true;
+  }catch(e){ return false; }   // denegado (sin gesto del usuario, política del navegador…)
+}
+async function fsExit(){
+  try{
+    if(document.exitFullscreen) await document.exitFullscreen();
+    else if(document.webkitExitFullscreen) document.webkitExitFullscreen();
+  }catch(e){}
+}
+
+function toggleFullscreen(){
+  if(!fsSupported()){
+    showToast('Este navegador no permite la pantalla completa. En iPhone: pulsa Compartir → «Añadir a pantalla de inicio» y abre la app desde su icono; así se muestra sin barras.', 9000);
+    return;
+  }
+  if(fsElement()){ fsSavePref('off'); fsExit(); }
+  else            { fsSavePref('auto'); fsEnter(); }
+}
+
+function updateFsButtons(){
+  const on = !!fsElement();
+  const label = on ? 'Salir de pantalla completa' : 'Pantalla completa';
+  document.querySelectorAll('.fsBtn').forEach(b=>{
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    b.setAttribute('aria-label', label);
+    b.title = label;
+    const t = b.querySelector('.fsLabel');
+    if(t) t.textContent = on ? 'Salir' : 'Pantalla completa';
+  });
+}
+
+function initFullscreen(){
+  const supported = fsSupported();
+  // iPhone en Safari: el botón se muestra solo para explicar la alternativa
+  const showHintOnly = !supported && isIOS() && !isStandalone();
+  const visible = (supported && !isFullscreenDisplayMode()) || showHintOnly;
+  document.querySelectorAll('.fsBtn').forEach(b=>b.classList.toggle('hidden', !visible));
+
+  ['fullscreenchange','webkitfullscreenchange'].forEach(ev=>document.addEventListener(ev, updateFsButtons));
+  updateFsButtons();
+
+  // Entrada automática: primer toque en pantallas táctiles, una sola vez por carga
+  if(supported && isTouchDevice() && !isFullscreenDisplayMode() && fsPref() !== 'off'){
+    const auto = ()=>{
+      document.removeEventListener('click', auto, true);
+      if(!fsElement()) fsEnter();
+    };
+    // En fase de captura: se ejecuta antes que el botón pulsado, que podría abrir un aviso
+    document.addEventListener('click', auto, true);
+  }
+}
+
+/* ============================================================
    EXPORTAR PDF (window.print — sin dependencias externas)
    ============================================================ */
 function exportPDF(){
@@ -1618,6 +1755,7 @@ const APP_BUILD = '';
   el.innerHTML = 'Versión <b>' + escapeHtml(APP_VERSION) + '</b>' + escapeHtml(fecha);
 })();
 
+initFullscreen();
 document.getElementById('inRaceDate').value = todayIso();
 onCoreChange();
 renderParcialList();

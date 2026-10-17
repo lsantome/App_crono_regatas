@@ -88,6 +88,26 @@ const CACHE_VERSION = 'v2';   // antes 'v1'
 
 Si lo olvidas, los usuarios seguirán viendo la versión antigua guardada en caché.
 
+## Pantalla completa
+
+El botón de pantalla completa está en las tres cabeceras (configuración, regata y
+análisis). En el móvil solo se ve el icono.
+
+- **PC, Android e iPad:** el botón entra y sale. En pantallas táctiles, además, se
+  entra sola al **primer toque**. Los navegadores no permiten hacerlo al cargar la
+  página sin un gesto del usuario, así que ese primer toque es imprescindible.
+- **Recordatorio:** si sales con el botón, no se vuelve a forzar al abrir la app. Si
+  sales con un gesto del sistema, solo se respeta durante esa visita. Para reactivarla,
+  pulsa el botón.
+- **App instalada en Android:** el manifest pide `fullscreen` (con `standalone` como
+  alternativa), así que se abre sin barras desde el primer momento, sin tocar nada.
+  Queda oculta la barra de estado (hora y batería); se recupera deslizando desde el
+  borde superior. Si prefieres verla, borra la línea `display_override` del manifest.
+- **iPhone:** Safari no ofrece esta función. La alternativa es *Compartir → Añadir a
+  pantalla de inicio*; abierta desde su icono, la app se muestra sin barras del
+  navegador. El botón, en Safari, explica estos pasos.
+- Las cabeceras y los márgenes respetan el *notch* y las barras del sistema.
+
 ## Notas de funcionamiento
 
 - **Los tiempos se guardan solos.** Tras cada pulsación el estado queda en el

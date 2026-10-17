@@ -1,0 +1,1650 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
+<title>Cronometraje de Regatas — Traineras</title>
+<meta name="description" content="Cronometraje de regatas de traineras: tiempos por parcial, clasificación en directo, análisis y exportación a PDF y Excel.">
+<meta name="theme-color" content="#eef1f5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f141c" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Regatas">
+<!-- PWA: estos archivos solo existen al publicar en un servidor web.
+     Si abres este HTML suelto, el navegador los ignora y la app funciona igual. -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23111620'/%3E%3Cg transform='translate(32 32) rotate(-38) scale(.82) translate(-32 -14)' fill='%23d99a3e' stroke='%23d99a3e' stroke-linecap='round'%3E%3Cpath d='M2 14C14 9.2 50 9.2 62 14C50 18.8 14 18.8 2 14Z' stroke='none'/%3E%3Cg fill='none' stroke-width='2.2'%3E%3Cpath d='M20 11.4L14.6 3.2M29 11.2L23.6 3M38 11.2L32.6 3M47 11.4L41.6 3.2M20 16.6L14.6 24.8M29 16.8L23.6 25M38 16.8L32.6 25M47 16.6L41.6 24.8'/%3E%3C/g%3E%3Cg fill='none' stroke-width='4.4'%3E%3Cpath d='M15.7 4.9L14.4 2.9M24.7 4.7L23.4 2.7M33.7 4.7L32.4 2.7M42.7 4.9L41.4 2.9M15.7 23.1L14.4 25.1M24.7 23.3L23.4 25.3M33.7 23.3L32.4 25.3M42.7 23.1L41.4 25.1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#0a0d11; --bg2:#111620; --card:#161c26; --card2:#1b2330;
+    --border:#2a3342; --text:#eaeef3; --muted:#8b9bac;
+    --accent:#d99a3e; --accent-ink:#241703; --accent2:#3fc7dc;
+    --good:#34b874; --bad:#e6564f;
+    --good-bg:rgba(52,184,116,.14); --bad-bg:rgba(230,86,79,.16);
+    --btn-start:#227a52; --btn-split:#1c6a92; --btn-undo:#3c4451;
+    --radius-sm:7px; --radius-md:12px; --radius-lg:18px;
+    --shadow: 0 3px 14px rgba(0,0,0,.4);
+    --font-ui: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --font-mono: ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  html[data-theme="light"]{
+    --bg:#eef1f4; --bg2:#e3e8ec; --card:#ffffff; --card2:#f5f8fa;
+    --border:#ccd5dc; --text:#161b20; --muted:#5c6c79;
+    --accent:#a8631a; --accent-ink:#fff8ee; --accent2:#0b7f95;
+    --good:#188a52; --bad:#c22e28;
+    --good-bg:rgba(24,138,82,.10); --bad-bg:rgba(194,46,40,.11);
+    --btn-start:#1c7a4d; --btn-split:#155d80; --btn-undo:#8b95a0;
+    --shadow: 0 2px 10px rgba(20,30,45,.12);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);
+    font-family:var(--font-ui);
+    -webkit-tap-highlight-color:transparent; overscroll-behavior:none;}
+  button{font-family:inherit;cursor:pointer;border:none;
+    transition:filter .12s ease, transform .05s ease, opacity .15s ease, background-color .15s ease;}
+  button:active{transform:translateY(1px);}
+  button:hover:not(:disabled){filter:brightness(1.08);}
+  input,select{font-family:inherit;}
+  :focus-visible{outline:2px solid var(--accent2);outline-offset:2px;}
+  .hidden{display:none !important;}
+  .safe-bottom{padding-bottom:max(80px, env(safe-area-inset-bottom));}
+
+  /* ---------- SETUP ---------- */
+  #screenSetup{max-width:920px;margin:0 auto;padding:24px 20px 0;}
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;
+    padding-bottom:16px;border-bottom:2px solid var(--border);}
+  .topbar h1{font-size:1.4rem;letter-spacing:.2px;margin:0;color:var(--text);font-weight:800;
+    display:flex;align-items:center;gap:12px;}
+  .topbar .logo{width:68px;height:30px;color:var(--accent);flex:0 0 auto;}
+  .themeBtn{background:var(--card2);border:1px solid var(--border);color:var(--text);
+    border-radius:var(--radius-sm);padding:9px 15px;font-size:.9rem;}
+  fieldset{border:1px solid var(--border);border-left:3px solid var(--accent2);border-radius:var(--radius-md);
+    padding:16px 18px 20px;margin-bottom:16px;background:var(--card);box-shadow:var(--shadow);}
+  legend{padding:0 8px;color:var(--accent2);font-weight:700;font-size:.9rem;letter-spacing:.2px;}
+  .row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;}
+  .field{display:flex;flex-direction:column;gap:5px;min-width:130px;}
+  .field label{font-size:.78rem;color:var(--muted);font-weight:600;}
+  .field input[type=number], .field input[type=text], .field input[type=date]{
+    background:var(--bg2);border:1px solid var(--border);color:var(--text);
+    border-radius:var(--radius-sm);padding:10px 11px;font-size:1rem;width:100%;}
+  .field input[type=number]{font-family:var(--font-mono);}
+  .radioGroup{display:flex;gap:16px;flex-wrap:wrap;align-items:center;}
+  .radioGroup label{display:flex;align-items:center;gap:7px;font-size:.92rem;padding:8px 4px;}
+  .hint{font-size:.78rem;color:var(--muted);margin-top:2px;}
+  .warn{color:var(--bad);font-weight:600;}
+  .ok{color:var(--good);font-weight:600;}
+
+  .parcialList{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;}
+  .parcialChip{display:flex;flex-direction:column;gap:3px;}
+  .parcialChip span{font-size:.7rem;color:var(--muted);font-weight:600;}
+  .parcialChip input{background:var(--bg2);border:1px solid var(--border);color:var(--text);
+    border-radius:var(--radius-sm);padding:7px 9px;font-size:.85rem;width:140px;}
+
+  .heatEditor{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;}
+  .heatEditItem{background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:9px 10px;display:flex;flex-direction:column;gap:5px;min-width:90px;text-align:center;}
+  .heatEditItem span{font-size:.72rem;color:var(--muted);font-weight:600;}
+  .heatEditItem input{width:60px;text-align:center;background:var(--bg);border:1px solid var(--border);
+    color:var(--text);border-radius:6px;padding:5px;font-family:var(--font-mono);}
+
+  .teamsHeat{border:1px dashed var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px;background:var(--card2);}
+  .teamsHeat h4{margin:0 0 10px;font-size:.85rem;color:var(--accent2);font-weight:700;}
+  .teamRow{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+  .teamRow input[type=text]{flex:1;background:var(--bg);border:1px solid var(--border);
+    color:var(--text);border-radius:6px;padding:8px 10px;}
+  .teamRow label{display:flex;align-items:center;gap:4px;font-size:.78rem;color:var(--muted);white-space:nowrap;}
+
+  .bigBtn{background:var(--accent);color:var(--accent-ink);border:none;border-radius:var(--radius-md);
+    padding:15px 20px;font-size:1.05rem;font-weight:700;width:100%;margin:16px 0 26px;letter-spacing:.2px;
+    box-shadow:var(--shadow);}
+  .bigBtn:disabled{opacity:.4;box-shadow:none;}
+
+  /* ---------- RACE SCREEN ---------- */
+  #screenRace{display:none;flex-direction:column;height:100vh;height:100dvh;}
+  #raceHeader{display:flex;align-items:center;justify-content:space-between;
+    padding:12px 16px;border-bottom:1px solid var(--border);background:var(--bg2);flex:0 0 auto;
+    box-shadow:0 2px 8px rgba(0,0,0,.18);gap:10px;flex-wrap:wrap;}
+  #raceHeader h2{margin:0;font-size:1.05rem;color:var(--text);font-weight:700;letter-spacing:.2px;}
+  #raceHeader .hdrBtns{display:flex;gap:8px;flex-wrap:wrap;}
+  #raceHeader button{background:var(--card2);border:1px solid var(--border);color:var(--text);
+    border-radius:var(--radius-sm);padding:8px 13px;font-size:.85rem;}
+  #exportBtn{background:var(--good);color:#04170c;border:none !important;}
+
+  #mobileTabs{display:none;}
+
+  #raceBody{display:flex;flex:1 1 auto;min-height:0;}
+  #colTimers{flex:0 0 42%;min-width:220px;display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--border);}
+  #divider{width:8px;flex:0 0 8px;cursor:col-resize;background:var(--card2);position:relative;}
+  #divider::after{content:"";position:absolute;left:3px;top:50%;transform:translateY(-50%);
+    width:2px;height:36px;background:var(--border);border-radius:2px;}
+  #divider:active,#divider.dragging{background:var(--accent2);}
+  #colClas{flex:1 1 auto;min-width:220px;display:flex;flex-direction:column;min-height:0;}
+
+  #timersScroll{flex:1 1 auto;min-height:0;overflow:auto;padding:12px;}
+  .heatBlock{border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:14px;overflow:hidden;background:var(--card);box-shadow:var(--shadow);}
+  .heatHead{display:flex;align-items:center;justify-content:space-between;
+    background:var(--card2);padding:9px 14px;border-bottom:1px solid var(--border);}
+  .heatHead b{font-size:.8rem;color:var(--accent2);font-weight:700;letter-spacing:.3px;}
+  .heatStartBtn{background:var(--btn-start);color:#fff;border:none;border-radius:var(--radius-sm);
+    padding:9px 15px;font-size:.85rem;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,.25);}
+  .heatStartBtn:disabled{background:transparent;color:var(--good);border:1px solid var(--good);opacity:1;box-shadow:none;}
+
+  .teamCard{display:flex;align-items:center;gap:10px;padding:11px 14px;border-top:1px solid var(--border);min-width:540px;}
+  .teamCard:first-of-type{border-top:none;}
+  .teamCard.finished{background:var(--good-bg);}
+  .teamCard .star{color:var(--accent);font-size:1.15rem;width:18px;text-align:center;flex:0 0 auto;}
+  .teamCard .tname{flex:0 0 150px;font-weight:600;font-size:.95rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .teamCard .tclock{flex:0 0 92px;font-family:var(--font-mono);font-size:1.15rem;font-weight:700;color:var(--accent2);}
+  .teamCard .tbtns{display:flex;gap:8px;flex:1;align-items:center;flex-wrap:wrap;justify-content:flex-end;}
+  .btnStart{background:var(--btn-start);color:#fff;border-radius:var(--radius-sm);padding:11px 16px;font-weight:700;font-size:.9rem;box-shadow:0 2px 6px rgba(0,0,0,.25);}
+  .btnSplit{background:var(--btn-split);color:#fff;border-radius:var(--radius-sm);padding:11px 16px;font-weight:700;font-size:.9rem;flex:1;min-width:130px;box-shadow:0 2px 6px rgba(0,0,0,.25);}
+  .btnSplit:disabled{opacity:.35;box-shadow:none;}
+  .btnUndo{background:var(--btn-undo);color:#fff;border-radius:var(--radius-sm);padding:11px 12px;font-size:.85rem;
+    flex:0 0 auto;min-width:44px;margin-left:10px;}
+  .btnUndo:disabled{opacity:.3;}
+  .btnUndo.confirming{background:var(--bad);color:#fff;font-weight:700;min-width:104px;padding:11px 10px;
+    animation:pulseWarn 1s ease-in-out infinite;}
+  @keyframes pulseWarn{0%,100%{box-shadow:0 0 0 0 rgba(230,86,79,.55);}50%{box-shadow:0 0 0 6px rgba(230,86,79,0);}}
+  .doneTag{color:var(--good);font-weight:700;font-size:.85rem;flex:1;text-align:right;}
+
+  #clasTabs{display:flex;gap:4px;padding:10px 10px 0;overflow-x:auto;flex:0 0 auto;background:var(--bg);}
+  #clasTabs button{background:var(--card2);border:1px solid var(--border);color:var(--muted);
+    border-radius:var(--radius-sm) var(--radius-sm) 0 0;padding:9px 15px;font-size:.85rem;font-weight:600;white-space:nowrap;}
+  #clasTabs button.active{background:var(--card);color:var(--accent);border-bottom:2px solid var(--accent);}
+
+  #clasScroll{flex:1 1 auto;min-height:0;overflow:auto;padding:12px;}
+  table.clasTable{border-collapse:collapse;width:100%;min-width:560px;}
+  table.clasTable th{text-align:left;font-size:.72rem;color:var(--muted);font-weight:700;
+    letter-spacing:.2px;padding:7px 8px;border-bottom:2px solid var(--border);position:sticky;top:0;background:var(--bg);}
+  table.clasTable td{padding:9px 8px;border-bottom:1px solid var(--border);font-size:.92rem;vertical-align:middle;}
+  table.clasTable tbody tr:nth-child(even) td{background:var(--card2);}
+  tr.mine td{background:var(--good-bg) !important;font-weight:700;}
+  .pos{width:28px;color:var(--muted);font-weight:700;font-family:var(--font-mono);}
+  .tBig{font-weight:700;font-family:var(--font-mono);}
+  .tSmall{font-size:.72rem;color:var(--muted);font-family:var(--font-mono);}
+  .diffGood{color:var(--good);font-weight:700;font-family:var(--font-mono);}
+  .diffBad{color:var(--bad);font-weight:700;font-family:var(--font-mono);}
+  .diffSmall{font-size:.72rem;font-family:var(--font-mono);}
+  .diffNote{font-size:.65rem;color:var(--muted);}
+
+  /* ---------- ANÁLISIS ---------- */
+  #screenAnalysis{display:none;flex-direction:column;height:100vh;height:100dvh;}
+  #analysisScroll{flex:1 1 auto;min-height:0;overflow:auto;}
+  #analysisContent{max-width:1000px;margin:0 auto;padding:18px 16px 0;}
+  #analysisContent h3{color:var(--accent2);font-size:.92rem;font-weight:700;margin:24px 0 8px;letter-spacing:.2px;}
+  #analysisContent h3:first-child{margin-top:4px;}
+  .chartWrap{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px;overflow-x:auto;box-shadow:var(--shadow);}
+  .legend{display:flex;flex-wrap:wrap;gap:10px 16px;margin:10px 2px 0;}
+  .legend span.sw{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:5px;vertical-align:-1px;}
+  .legendItem{font-size:.78rem;color:var(--muted);}
+  .analysisTableWrap{overflow:auto;border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:var(--shadow);}
+  table.anTable{border-collapse:collapse;width:100%;}
+  table.anTable th,table.anTable td{padding:7px 9px;border-bottom:1px solid var(--border);font-size:.82rem;white-space:nowrap;}
+  table.anTable td{font-family:var(--font-mono);}
+  table.anTable thead tr:first-child th{text-align:center;background:var(--card2);color:var(--accent2);font-weight:700;font-family:var(--font-ui);}
+  table.anTable thead tr:last-child th{text-align:center;color:var(--muted);font-weight:700;font-size:.68rem;font-family:var(--font-ui);}
+  table.anTable th.anSortable{cursor:pointer;user-select:none;}
+  table.anTable th.anSortable:hover{color:var(--accent2);}
+  table.anTable th .sortIcon{opacity:.45;font-size:.85em;}
+  table.anTable tbody tr:nth-child(even) td{background:var(--card2);}
+  table.anTable tr.mine td{background:var(--good-bg) !important;font-weight:700;}
+  table.anTable td:first-child, table.anTable th:first-child{text-align:left;position:sticky;left:0;background:var(--card);font-family:var(--font-ui);font-weight:600;}
+  table.anTable tbody tr:nth-child(even) td:first-child{background:var(--card2);}
+
+  /* ---------- AVISO DE ACTUALIZACIÓN ---------- */
+  #updateBar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom));
+    z-index:300;display:none;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;
+    background:var(--panel);border:1px solid var(--border);box-shadow:0 8px 28px rgba(0,0,0,.25);
+    font-size:.88rem;color:var(--text);max-width:calc(100% - 24px);}
+  #updateBar button{padding:6px 12px;font-size:.85rem;}
+  #updateBar .uClose{background:none;border:none;color:var(--muted);font-size:1.1rem;padding:0 4px;cursor:pointer;}
+
+  /* ---------- PRINT ---------- */
+  #printArea{display:none;}
+  @media print{
+    html,body{background:#fff !important;}
+    body *{visibility:hidden;}
+    #updateBar{display:none !important;}
+    #printArea, #printArea *{visibility:visible;}
+    #printArea{display:block;position:absolute;left:0;top:0;width:100%;}
+    @page{size:A4 landscape;margin:10mm;}
+    .printPage{page-break-after:always;padding:4mm 0;}
+    .printPage:last-child{page-break-after:auto;}
+    .printRaceHead{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1.5px solid #b5661b;padding-bottom:1.5mm;margin-bottom:3mm;font-size:10pt;color:#333;}
+    .printRaceHead strong{font-size:11.5pt;color:#111;}
+    .printPage h2{margin:0 0 3mm;font-size:15pt;}
+    .printPage h3{margin:0 0 4mm;font-size:10pt;font-weight:400;color:#333;}
+    table.printTable{border-collapse:collapse;width:100%;font-size:8.5pt;}
+    table.printTable th,table.printTable td{border:1px solid #999;padding:3px 5px;text-align:left;}
+    table.printTable th{background:#eee;}
+    table.printTable tbody tr:nth-child(even) td{background:#f7f7f7;}
+    .pGood{color:#1a8f2c;font-weight:700;}
+    .pBad{color:#c0392b;font-weight:700;}
+    .printChartWrap{border:1px solid #999;border-radius:4px;padding:6px;margin-bottom:6px;}
+    .printChartWrap svg{width:100%;height:auto;display:block;}
+    .printLegend{display:flex;flex-wrap:wrap;gap:4mm 8mm;font-size:8pt;color:#333;margin:0 0 5mm;}
+    .printLegend span.sw{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:4px;vertical-align:-1px;}
+  }
+
+  /* ---------- MÓVIL (smartphone) ---------- */
+  @media (max-width: 760px){
+    #screenSetup{padding:16px 14px 0;}
+    .row{gap:10px;}
+    .field{min-width:0;flex:1 1 45%;}
+    .topbar h1{font-size:1.15rem;gap:9px;}
+    .topbar .logo{width:48px;height:21px;}
+
+    #mobileTabs{display:flex;gap:6px;padding:8px 10px;background:var(--bg2);border-bottom:1px solid var(--border);flex:0 0 auto;}
+    #mobileTabs button{flex:1;background:var(--card2);border:1px solid var(--border);color:var(--muted);
+      border-radius:var(--radius-sm);padding:10px 8px;font-size:.82rem;font-weight:700;}
+    #mobileTabs button.active{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
+
+    #raceHeader h2{font-size:.95rem;}
+    #raceHeader button{padding:8px 10px;font-size:.78rem;}
+
+    #raceBody{flex-direction:column;}
+    #divider{display:none;}
+    #colTimers, #colClas{flex:1 1 auto;width:100%;min-width:0;border-right:none;}
+    #raceBody[data-mobiletab="timers"] #colClas{display:none;}
+    #raceBody[data-mobiletab="clas"] #colTimers{display:none;}
+
+    .teamCard{min-width:0;flex-wrap:wrap;padding:12px;row-gap:8px;}
+    .teamCard .tname{flex:1 1 auto;min-width:0;}
+    .teamCard .tclock{order:3;flex:0 0 auto;font-size:1.3rem;}
+    .teamCard .tbtns{order:4;flex:1 1 100%;justify-content:stretch;}
+    .btnStart, .btnSplit{flex:1 1 auto;padding:13px 14px;min-height:46px;}
+    .btnUndo{flex:0 0 auto;min-width:52px;min-height:46px;margin-left:8px;}
+    .btnUndo.confirming{min-width:120px;}
+
+    table.clasTable, table.anTable{min-width:520px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= SETUP ================= -->
+<div id="screenSetup" class="safe-bottom">
+  <div class="topbar">
+    <h1><svg class="logo" viewBox="0 0 64 28" aria-hidden="true">
+      <g stroke="currentColor" stroke-linecap="round" fill="none">
+        <g stroke-width="1.5"><path d="M20 11.4 L14.6 3.2"/><path d="M29 11.2 L23.6 3"/><path d="M38 11.2 L32.6 3"/><path d="M47 11.4 L41.6 3.2"/><path d="M20 16.6 L14.6 24.8"/><path d="M29 16.8 L23.6 25"/><path d="M38 16.8 L32.6 25"/><path d="M47 16.6 L41.6 24.8"/></g>
+        <g stroke-width="3.6"><path d="M15.7 4.9 L14.4 2.9"/><path d="M24.7 4.7 L23.4 2.7"/><path d="M33.7 4.7 L32.4 2.7"/><path d="M42.7 4.9 L41.4 2.9"/><path d="M15.7 23.1 L14.4 25.1"/><path d="M24.7 23.3 L23.4 25.3"/><path d="M33.7 23.3 L32.4 25.3"/><path d="M42.7 23.1 L41.4 25.1"/></g>
+      </g>
+      <path d="M2 14 C14 9.2 50 9.2 62 14 C50 18.8 14 18.8 2 14Z" fill="currentColor"/>
+    </svg>Cronometraje de Regatas</h1>
+    <button class="themeBtn" onclick="toggleTheme()" id="themeBtnSetup">☾ Oscuro</button>
+  </div>
+
+  <fieldset>
+    <legend>1 · Datos de la regata</legend>
+    <div class="row">
+      <div class="field" style="flex:2 1 260px;">
+        <label for="inRaceName">Nombre de la regata</label>
+        <input type="text" id="inRaceName" maxlength="80" placeholder="p. ej. Jornada 3 — Ría de Arousa" autocomplete="off">
+      </div>
+      <div class="field" style="flex:1 1 170px;">
+        <label for="inRaceDate">Fecha</label>
+        <input type="date" id="inRaceDate">
+      </div>
+    </div>
+    <div class="hint">Ambos datos se incluyen en cada fila del Excel exportado.</div>
+  </fieldset>
+
+  <fieldset>
+    <legend>2 · Equipos y tandas</legend>
+    <div class="row">
+      <div class="field">
+        <label>Nº de equipos</label>
+        <input type="number" id="inNumEquipos" min="1" max="40" value="16" oninput="onCoreChange()">
+      </div>
+      <div class="field">
+        <label>Equipos por tanda (por defecto)</label>
+        <input type="number" id="inTandaDefault" min="1" max="10" value="4" oninput="onCoreChange()">
+      </div>
+      <div class="field">
+        <label>Nº de parciales (puntos de paso)</label>
+        <input type="number" id="inNumParciales" min="1" max="12" value="4" oninput="onParcialesChange()">
+      </div>
+    </div>
+    <div id="heatSumMsg" class="hint"></div>
+    <div class="heatEditor" id="heatEditor"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>3 · Nombres de los puntos de paso</legend>
+    <div class="hint">Puedes personalizarlos (p. ej. "Cimadevilla", "Ciares", "Km 1,5"...). El último siempre es la meta.</div>
+    <div class="parcialList" id="parcialList"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>4 · Modo de salida (aplica a toda la regata)</legend>
+    <div class="radioGroup">
+      <label><input type="radio" name="startMode" value="conjunta" checked> Conjunta por tanda (un botón arranca los 4 a la vez)</label>
+      <label><input type="radio" name="startMode" value="individual"> Individual por equipo</label>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>5 · Equipos por tanda</legend>
+    <div class="hint">Marca ★ tu equipo. Desmarca "Participa" si un equipo no se presenta a esta regata.</div>
+    <div id="teamsByHeat"></div>
+  </fieldset>
+
+  <button class="bigBtn" id="btnStartRace" onclick="startRace()">Comenzar regata</button>
+</div>
+
+<!-- ================= RACE ================= -->
+<div id="screenRace">
+  <div id="raceHeader">
+    <h2 id="raceTitle">Regata en curso</h2>
+    <div class="hdrBtns">
+      <button onclick="openAnalysis()">📊 Análisis</button>
+      <button id="excelBtn" onclick="exportExcel()">⬇ Excel</button>
+      <button id="exportBtn" onclick="exportPDF()">⬇ Exportar PDF</button>
+      <button onclick="toggleTheme()" id="themeBtnRace">☾ Oscuro</button>
+      <button onclick="resetAll()">↺ Nueva regata</button>
+    </div>
+  </div>
+
+  <div id="mobileTabs">
+    <button id="mtabTimers" class="active" onclick="setMobileTab('timers')">⏱ Cronómetros</button>
+    <button id="mtabClas" onclick="setMobileTab('clas')">🏁 Clasificación</button>
+  </div>
+
+  <div id="raceBody" data-mobiletab="timers">
+    <div id="colTimers">
+      <div id="timersScroll" class="safe-bottom"></div>
+    </div>
+    <div id="divider"></div>
+    <div id="colClas">
+      <div id="clasTabs"></div>
+      <div id="clasScroll" class="safe-bottom"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= ANÁLISIS ================= -->
+<div id="screenAnalysis">
+  <div id="raceHeader">
+    <h2>📊 Análisis de la regata</h2>
+    <div class="hdrBtns">
+      <button onclick="toggleTheme()" id="themeBtnAnalysis">☾ Oscuro</button>
+      <button onclick="closeAnalysis()">← Volver</button>
+    </div>
+  </div>
+  <div id="analysisScroll" class="safe-bottom">
+    <div id="analysisContent"></div>
+  </div>
+</div>
+
+<div id="updateBar" role="status">
+  <span>Hay una versión nueva de la aplicación.</span>
+  <button onclick="applyUpdate()">Actualizar</button>
+  <button class="uClose" onclick="document.getElementById('updateBar').style.display='none'" aria-label="Cerrar aviso">✕</button>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+/* ============================================================
+   ESTADO
+   ============================================================ */
+let CFG = null;      // {numEquipos, tandaDefault, numParciales, parcialNames, startMode, heatSizes}
+let TEAMS = [];       // {id, name, esMio, participa, heat, splits:[ms|null,...], startTime:null, finished:false}
+let HEATS = [];       // [{teamIdxs:[...], started:false}]
+let clasTab = 'total'; // 'total' | 0..N-1 (indice de parcial)
+let tickHandle = null;
+let wakeLock = null;
+
+/* ------------------------------------------------------------
+   RELOJ MONÓTONO
+   performance.now() no se ve afectado por ajustes del reloj del
+   sistema (NTP, cambio manual de hora) durante la regata.
+   Se guarda además la hora de pared para poder recalcular la
+   base tras recargar la página.
+   ------------------------------------------------------------ */
+function nowMs(){ return performance.now(); }
+
+/* ============================================================
+   HELPERS DE TIEMPO
+   ============================================================ */
+function fmtTime(ms){
+  if(ms==null || isNaN(ms)) return '–';
+  const totalDs = Math.round(Math.abs(ms)/100);
+  const ds = totalDs % 10;
+  const totalS = Math.floor(totalDs/10);
+  const s = totalS % 60;
+  const m = Math.floor(totalS/60);
+  return (ms<0?'-':'') + m + ':' + String(s).padStart(2,'0') + '.' + ds;
+}
+function fmtSigned(ms){
+  if(ms==null || isNaN(ms)) return '–';
+  const sign = ms > 0 ? '+' : (ms < 0 ? '-' : '+');
+  return sign + fmtTime(Math.abs(ms));
+}
+
+/* ============================================================
+   SETUP — TANDAS
+   ============================================================ */
+function computeDefaultHeatSizes(numEquipos, tandaDefault){
+  const sizes = [];
+  let rem = numEquipos;
+  while(rem > 0){
+    const s = Math.min(tandaDefault, rem);
+    sizes.push(s);
+    rem -= s;
+  }
+  return sizes.length ? sizes : [0];
+}
+
+let heatSizesManual = null; // conserva ediciones manuales mientras no cambien numEquipos/tandaDefault
+let lastNumEquipos = null, lastTandaDefault = null;
+
+function onCoreChange(){
+  const numEquipos = parseInt(document.getElementById('inNumEquipos').value)||0;
+  const tandaDefault = parseInt(document.getElementById('inTandaDefault').value)||1;
+  if(numEquipos !== lastNumEquipos || tandaDefault !== lastTandaDefault){
+    heatSizesManual = computeDefaultHeatSizes(numEquipos, tandaDefault);
+    lastNumEquipos = numEquipos; lastTandaDefault = tandaDefault;
+  }
+  renderHeatEditor(numEquipos);
+  renderTeamInputs(numEquipos);
+}
+
+function renderHeatEditor(numEquipos){
+  const box = document.getElementById('heatEditor');
+  box.innerHTML = '';
+  heatSizesManual.forEach((sz, i)=>{
+    const div = document.createElement('div');
+    div.className = 'heatEditItem';
+    div.innerHTML = '<span>Tanda '+(i+1)+'</span><input type="number" min="1" max="10" value="'+sz+'" onchange="onHeatSizeEdit('+i+',this.value)">';
+    box.appendChild(div);
+  });
+  validateHeatSum(numEquipos);
+}
+function onHeatSizeEdit(i, val){
+  heatSizesManual[i] = Math.max(1, parseInt(val)||1);
+  const numEquipos = parseInt(document.getElementById('inNumEquipos').value)||0;
+  validateHeatSum(numEquipos);
+  renderTeamInputs(numEquipos);
+}
+function validateHeatSum(numEquipos){
+  const sum = heatSizesManual.reduce((a,b)=>a+b,0);
+  const msg = document.getElementById('heatSumMsg');
+  if(sum === numEquipos){
+    msg.innerHTML = '<span class="ok">✓ '+heatSizesManual.length+' tandas, '+sum+' equipos — cuadra.</span>';
+  } else {
+    msg.innerHTML = '<span class="warn">⚠ Las tandas suman '+sum+' equipos pero hay '+numEquipos+' configurados. Ajusta antes de continuar.</span>';
+  }
+  return sum === numEquipos;
+}
+
+/* ============================================================
+   SETUP — PARCIALES
+   ============================================================ */
+let parcialNamesEdited = {}; // {index: nombre}
+function onParcialesChange(){ renderParcialList(); }
+function renderParcialList(){
+  const n = Math.max(1, parseInt(document.getElementById('inNumParciales').value)||1);
+  const box = document.getElementById('parcialList');
+  box.innerHTML = '';
+  for(let i=0;i<n;i++){
+    const isLast = i === n-1;
+    const def = isLast ? 'Meta' : ('Ciaboga '+(i+1));
+    const val = parcialNamesEdited[i] !== undefined ? parcialNamesEdited[i] : def;
+    const chip = document.createElement('div');
+    chip.className = 'parcialChip';
+    chip.innerHTML = '<span>Parcial '+(i+1)+(isLast?' (meta)':'')+'</span><input type="text" value="'+val+'" oninput="parcialNamesEdited['+i+']=this.value">';
+    box.appendChild(chip);
+  }
+}
+
+/* ============================================================
+   SETUP — NOMBRES DE EQUIPO POR TANDA
+   ============================================================ */
+let teamInputsState = {}; // {globalIdx: {name, esMio, participa}}
+function renderTeamInputs(numEquipos){
+  const box = document.getElementById('teamsByHeat');
+  box.innerHTML = '';
+  let idx = 0;
+  heatSizesManual.forEach((sz, hIdx)=>{
+    const wrap = document.createElement('div');
+    wrap.className = 'teamsHeat';
+    let html = '<h4>Tanda '+(hIdx+1)+' ('+sz+' equipos)</h4>';
+    for(let i=0;i<sz;i++){
+      if(idx >= numEquipos) break;
+      const gi = idx;
+      const prev = teamInputsState[gi] || {name:'', esMio:false, participa:true};
+      html += '<div class="teamRow">'
+        + '<input type="text" placeholder="Equipo '+(gi+1)+'" value="'+ (prev.name||'') +'" oninput="teamInputsState['+gi+']=teamInputsState['+gi+']||{};teamInputsState['+gi+'].name=this.value">'
+        + '<label><input type="radio" name="esMio" value="'+gi+'" '+(prev.esMio?'checked':'')+' onchange="setEsMio('+gi+')"> ★ Mi equipo</label>'
+        + '<label><input type="checkbox" '+(prev.participa!==false?'checked':'')+' onchange="teamInputsState['+gi+']=teamInputsState['+gi+']||{};teamInputsState['+gi+'].participa=this.checked"> Participa</label>'
+        + '</div>';
+      idx++;
+    }
+    wrap.innerHTML = html;
+    box.appendChild(wrap);
+  });
+}
+function setEsMio(gi){
+  Object.keys(teamInputsState).forEach(k=>{ if(teamInputsState[k]) teamInputsState[k].esMio = false; });
+  teamInputsState[gi] = teamInputsState[gi] || {};
+  teamInputsState[gi].esMio = true;
+}
+
+/* ============================================================
+   ARRANCAR REGATA
+   ============================================================ */
+function startRace(){
+  const numEquipos = parseInt(document.getElementById('inNumEquipos').value)||0;
+  const tandaDefault = parseInt(document.getElementById('inTandaDefault').value)||1;
+  const numParciales = Math.max(1, parseInt(document.getElementById('inNumParciales').value)||1);
+  const startMode = document.querySelector('input[name=startMode]:checked').value;
+
+  const raceName = document.getElementById('inRaceName').value.trim();
+  const raceDate = document.getElementById('inRaceDate').value; // 'YYYY-MM-DD'
+  if(!raceName){
+    alert('Indica el nombre de la regata. Se incluye en cada fila del Excel exportado.');
+    document.getElementById('inRaceName').focus();
+    return;
+  }
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(raceDate)){
+    alert('Indica la fecha de la regata.');
+    document.getElementById('inRaceDate').focus();
+    return;
+  }
+
+  if(!validateHeatSum(numEquipos)){
+    alert('Las tandas no suman el número total de equipos. Corrígelo antes de continuar.');
+    return;
+  }
+  let hasMio = false;
+  for(let i=0;i<numEquipos;i++){ if(teamInputsState[i] && teamInputsState[i].esMio) hasMio = true; }
+  if(!hasMio){
+    if(!confirm('No has marcado ningún equipo como "Mi equipo". ¿Continuar de todas formas? (no habrá diferencias/colores)')) return;
+  }
+
+  const parcialNames = [];
+  for(let i=0;i<numParciales;i++){
+    const isLast = i === numParciales-1;
+    parcialNames.push(parcialNamesEdited[i] || (isLast ? 'Meta' : ('Ciaboga '+(i+1))));
+  }
+
+  CFG = { numEquipos, tandaDefault, numParciales, parcialNames, startMode, heatSizes: heatSizesManual.slice(), raceName, raceDate };
+  document.getElementById('raceTitle').textContent = raceName + ' · ' + formatDateEs(raceDate);
+
+  TEAMS = [];
+  let idx = 0;
+  HEATS = CFG.heatSizes.map(()=>({teamIdxs:[], started:false}));
+  CFG.heatSizes.forEach((sz, hIdx)=>{
+    for(let i=0;i<sz;i++){
+      const st = teamInputsState[idx] || {};
+      TEAMS.push({
+        id: idx,
+        name: (st.name && st.name.trim()) || ('Equipo '+(idx+1)),
+        esMio: !!st.esMio,
+        participa: st.participa !== false,
+        heat: hIdx,
+        splits: new Array(CFG.numParciales).fill(null),
+        startTime: null,   // base monótona (performance.now)
+        startWall: null,   // hora de pared de la salida (para restaurar tras recarga)
+        finished: false
+      });
+      HEATS[hIdx].teamIdxs.push(idx);
+      idx++;
+    }
+  });
+
+  document.getElementById('screenSetup').classList.add('hidden');
+  document.getElementById('screenRace').style.display = 'flex';
+  clasTab = 'total';
+  setupDivider();
+  renderRace();
+  if(tickHandle) clearInterval(tickHandle);
+  tickHandle = setInterval(tickClocks, 100);
+  requestWakeLock();
+}
+
+function resetAll(){
+  if(!confirm('¿Empezar una regata nueva?\n\nSe borrarán los tiempos actuales. Si aún no has exportado el PDF o el Excel, hazlo antes.')) return;
+  if(tickHandle){ clearInterval(tickHandle); tickHandle = null; }
+  if(analysisTickHandle){ clearInterval(analysisTickHandle); analysisTickHandle = null; }
+  Object.values(pendingUndo).forEach(h=>clearTimeout(h));
+  pendingUndo = {};
+  releaseWakeLock();
+  clearState();
+  CFG = null; TEAMS = []; HEATS = [];
+  document.getElementById('screenAnalysis').style.display = 'none';
+  document.getElementById('screenRace').style.display = 'none';
+  document.getElementById('screenSetup').classList.remove('hidden');
+}
+
+/* ============================================================
+   MÓVIL — cambio de pestaña Cronómetros/Clasificación
+   ============================================================ */
+function setMobileTab(tab){
+  document.getElementById('raceBody').setAttribute('data-mobiletab', tab);
+  document.getElementById('mtabTimers').classList.toggle('active', tab==='timers');
+  document.getElementById('mtabClas').classList.toggle('active', tab==='clas');
+}
+
+/* ============================================================
+   PERSISTENCIA (localStorage)
+   La regata se guarda tras cada acción. Si el navegador se cierra,
+   la pestaña se recarga o el sistema descarta la app, los tiempos
+   se recuperan al volver a abrirla.
+   ============================================================ */
+const LS_KEY = 'regatas.estado.v1';
+
+function saveState(){
+  if(!CFG) return;
+  try{
+    localStorage.setItem(LS_KEY, JSON.stringify({
+      v:1, savedAt: Date.now(), CFG, TEAMS, HEATS,
+      parcialNamesEdited, heatSizesManual
+    }));
+  }catch(e){ /* almacenamiento lleno o no disponible: la app sigue funcionando */ }
+}
+function clearState(){ try{ localStorage.removeItem(LS_KEY); }catch(e){} }
+
+function loadState(){
+  let raw = null;
+  try{ raw = localStorage.getItem(LS_KEY); }catch(e){ return null; }
+  if(!raw) return null;
+  try{
+    const d = JSON.parse(raw);
+    if(!d || d.v !== 1 || !d.CFG || !Array.isArray(d.TEAMS)) return null;
+    return d;
+  }catch(e){ return null; }
+}
+
+function restoreState(d){
+  CFG = d.CFG; TEAMS = d.TEAMS; HEATS = d.HEATS;
+  if(d.parcialNamesEdited) parcialNamesEdited = d.parcialNamesEdited;
+  if(d.heatSizesManual) heatSizesManual = d.heatSizesManual;
+  // Recalcular la base monótona a partir de la hora de pared guardada
+  const wallNow = Date.now(), perfNow = nowMs();
+  TEAMS.forEach(t=>{
+    if(t.startWall != null) t.startTime = perfNow - (wallNow - t.startWall);
+    else t.startTime = null;
+  });
+  document.getElementById('raceTitle').textContent = CFG.raceName + ' · ' + formatDateEs(CFG.raceDate);
+  document.getElementById('screenSetup').classList.add('hidden');
+  document.getElementById('screenRace').style.display = 'flex';
+  clasTab = 'total';
+  setupDivider();
+  renderRace();
+  if(tickHandle) clearInterval(tickHandle);
+  tickHandle = setInterval(tickClocks, 100);
+  requestWakeLock();
+}
+
+function maybeRestore(){
+  const d = loadState();
+  if(!d) return false;
+  const activos = d.TEAMS.filter(t=>t.participa);
+  const hechos  = activos.reduce((a,t)=>a + t.splits.filter(x=>x!=null).length, 0);
+  const cuando  = new Date(d.savedAt);
+  const hhmm    = String(cuando.getHours()).padStart(2,'0')+':'+String(cuando.getMinutes()).padStart(2,'0');
+  const msg = 'Hay una regata sin cerrar:\n\n'
+            + '    ' + d.CFG.raceName + ' · ' + formatDateEs(d.CFG.raceDate) + '\n'
+            + '    ' + activos.length + ' equipos, ' + hechos + ' tiempos tomados\n'
+            + '    guardada a las ' + hhmm + '\n\n'
+            + '¿Recuperarla?  (Cancelar = empezar una regata nueva)';
+  if(confirm(msg)){ restoreState(d); return true; }
+  clearState();
+  return false;
+}
+
+/* ============================================================
+   PANTALLA ACTIVA (Wake Lock)
+   Evita que el móvil apague la pantalla durante la regata.
+   ============================================================ */
+async function requestWakeLock(){
+  if(!('wakeLock' in navigator)) return;
+  try{ wakeLock = await navigator.wakeLock.request('screen'); }
+  catch(e){ /* denegado o no disponible: no es crítico */ }
+}
+function releaseWakeLock(){
+  if(wakeLock){ try{ wakeLock.release(); }catch(e){} wakeLock = null; }
+}
+document.addEventListener('visibilitychange', ()=>{
+  // El bloqueo se pierde al pasar a segundo plano: se vuelve a pedir al regresar
+  if(document.visibilityState === 'visible' && CFG && !wakeLock) requestWakeLock();
+});
+
+/* ============================================================
+   RENDER — CRONOS
+   ============================================================ */
+function nextSplitLabel(team){
+  const doneCount = team.splits.filter(s=>s!=null).length;
+  if(doneCount >= CFG.numParciales) return null;
+  return CFG.parcialNames[doneCount];
+}
+
+function renderRace(){
+  renderTimers();
+  renderClasTabs();
+  renderClasificacion();
+  updateExportBtnVisibility();
+  saveState();
+}
+
+function renderTimers(){
+  const box = document.getElementById('timersScroll');
+  box.innerHTML = '';
+  HEATS.forEach((heat, hIdx)=>{
+    const block = document.createElement('div');
+    block.className = 'heatBlock';
+    let headHtml = '<div class="heatHead"><b>Tanda '+(hIdx+1)+'</b>';
+    if(CFG.startMode === 'conjunta'){
+      const allStarted = heat.teamIdxs.every(ti=>TEAMS[ti].startTime!=null);
+      headHtml += '<button class="heatStartBtn" '+(allStarted?'disabled':'')+' onclick="startHeat('+hIdx+')">'
+        + (allStarted ? '✓ En marcha' : '▶ Salida Tanda') + '</button>';
+    }
+    headHtml += '</div>';
+    block.innerHTML = headHtml;
+
+    heat.teamIdxs.forEach(ti=>{
+      const t = TEAMS[ti];
+      if(!t.participa) return;
+      const card = document.createElement('div');
+      card.className = 'teamCard' + (t.finished ? ' finished' : '');
+      let inner = '<span class="star">'+(t.esMio?'★':'')+'</span>';
+      inner += '<span class="tname">'+escapeHtml(t.name)+'</span>';
+      inner += '<span class="tclock" id="clock_'+t.id+'">'+(t.startTime!=null ? fmtTime(nowMs()-t.startTime) : '--:--.-')+'</span>';
+      inner += '<span class="tbtns">';
+      if(t.startTime==null){
+        if(CFG.startMode === 'individual'){
+          inner += '<button class="btnStart" onclick="startTeam('+t.id+')">▶ Salida</button>';
+        } else {
+          inner += '<span class="doneTag" style="color:var(--muted)">Esperando salida de tanda…</span>';
+        }
+      } else if(t.finished){
+        inner += '<span class="doneTag">✔ Finalizado</span>';
+      } else {
+        const label = nextSplitLabel(t);
+        inner += '<button class="btnSplit" onclick="markSplit('+t.id+')">◉ '+escapeHtml(label)+'</button>';
+      }
+      const confirming = !!pendingUndo[t.id];
+      // Solo se puede deshacer si hay un parcial tomado, o una salida individual que revertir
+      const canUndo = t.splits.some(x=>x!=null) || (t.startTime!=null && CFG.startMode==='individual');
+      inner += '<button class="btnUndo'+(confirming?' confirming':'')+'" '+(canUndo?'':'disabled')+' title="Deshacer el último tiempo (doble pulsación)" onclick="undoClick('+t.id+')">'+(confirming?'✕ ¿Seguro?':'↩')+'</button>';
+      inner += '</span>';
+      card.innerHTML = inner;
+      block.appendChild(card);
+    });
+    box.appendChild(block);
+  });
+}
+
+function escapeHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function startHeat(hIdx){
+  const now = nowMs();
+  HEATS[hIdx].teamIdxs.forEach(ti=>{
+    const t = TEAMS[ti];
+    if(t.participa && t.startTime==null){ t.startTime = now; t.startWall = Date.now(); }
+  });
+  HEATS[hIdx].started = true;
+  renderRace();
+}
+function startTeam(id){
+  TEAMS[id].startTime = nowMs();
+  TEAMS[id].startWall = Date.now();
+  renderRace();
+}
+function markSplit(id){
+  const t = TEAMS[id];
+  const doneCount = t.splits.filter(s=>s!=null).length;
+  if(doneCount >= CFG.numParciales) return;
+  t.splits[doneCount] = nowMs() - t.startTime;
+  if(doneCount+1 >= CFG.numParciales) t.finished = true;
+  renderRace();
+}
+function undoTeam(id){
+  const t = TEAMS[id];
+  const doneCount = t.splits.filter(s=>s!=null).length;
+  if(doneCount > 0){
+    t.splits[doneCount-1] = null;
+    t.finished = false;
+  } else if(t.startTime != null && CFG.startMode === 'individual'){
+    t.startTime = null;
+    t.startWall = null;
+  }
+  renderRace();
+}
+
+let pendingUndo = {}; // {teamId: timeoutHandle} — exige doble pulsación para deshacer
+function undoClick(id){
+  if(pendingUndo[id]){
+    clearTimeout(pendingUndo[id]);
+    delete pendingUndo[id];
+    undoTeam(id);
+    return;
+  }
+  pendingUndo[id] = setTimeout(()=>{ delete pendingUndo[id]; renderTimers(); }, 2500);
+  renderTimers();
+}
+
+function tickClocks(){
+  TEAMS.forEach(t=>{
+    if(t.participa && t.startTime!=null && !t.finished){
+      const el = document.getElementById('clock_'+t.id);
+      if(el) el.textContent = fmtTime(nowMs()-t.startTime);
+    }
+  });
+}
+
+function updateExportBtnVisibility(){
+  // El botón se muestra siempre; si faltan equipos por terminar solo cambia el aviso (tooltip)
+  const pend = TEAMS.filter(t=>t.participa && !t.finished).length;
+  const b = document.getElementById('exportBtn');
+  b.title = pend ? ('Faltan '+pend+' equipo(s) por terminar: el PDF saldrá incompleto') : 'Exportar el informe en PDF';
+}
+
+/* ============================================================
+   CLASIFICACIÓN
+   ============================================================ */
+function renderClasTabs(){
+  const box = document.getElementById('clasTabs');
+  box.innerHTML = '';
+  const bTotal = document.createElement('button');
+  bTotal.textContent = 'Total';
+  bTotal.className = clasTab === 'total' ? 'active' : '';
+  bTotal.onclick = ()=>{ clasTab='total'; renderClasTabs(); renderClasificacion(); };
+  box.appendChild(bTotal);
+  CFG.parcialNames.forEach((name,i)=>{
+    const b = document.createElement('button');
+    b.textContent = name;
+    b.className = clasTab === i ? 'active' : '';
+    b.onclick = ()=>{ clasTab=i; renderClasTabs(); renderClasificacion(); };
+    box.appendChild(b);
+  });
+}
+
+function myTeam(){ return TEAMS.find(t=>t.esMio && t.participa) || null; }
+
+function renderClasificacion(){
+  const box = document.getElementById('clasScroll');
+  const mine = myTeam();
+  const activos = TEAMS.filter(t=>t.participa);
+
+  if(clasTab === 'total'){
+    // Referencia: nº de parciales completados por MI equipo (comparación "a fecha de hoy")
+    const myDone = mine ? mine.splits.filter(s=>s!=null).length : 0;
+    const rows = activos.map(t=>{
+      const done = t.splits.filter(s=>s!=null).length;
+      const timeAt = done>0 ? t.splits[done-1] : null;
+      return {t, done, timeAt};
+    }).sort((a,b)=> b.done - a.done || (a.timeAt??Infinity) - (b.timeAt??Infinity));
+
+    let html = '<table class="clasTable"><thead><tr><th class="pos">#</th><th>Equipo</th><th>Progreso</th><th>Tiempo</th><th>Diferencia</th></tr></thead><tbody>';
+    rows.forEach((r,i)=>{
+      const refK = mine ? Math.min(myDone, r.done) : 0;
+      let diffCell = '–';
+      if(mine && refK>0){
+        const myAt = mine.splits[refK-1];
+        const otAt = r.t.splits[refK-1];
+        if(myAt!=null && otAt!=null && !r.t.esMio){
+          const diff = myAt - otAt;
+          diffCell = '<span class="'+(diff<=0?'diffGood':'diffBad')+'">'+fmtSigned(diff)+'</span>'
+            + (refK !== r.done || refK !== myDone ? '<div class="diffNote">@ '+CFG.parcialNames[refK-1]+'</div>' : '');
+        }
+      }
+      html += '<tr class="'+(r.t.esMio?'mine':'')+'">'
+        + '<td class="pos">'+(i+1)+'</td>'
+        + '<td>'+(r.t.esMio?'★ ':'')+escapeHtml(r.t.name)+'</td>'
+        + '<td class="tSmall">'+(r.done)+'/'+CFG.numParciales+'</td>'
+        + '<td class="tBig">'+fmtTime(r.timeAt)+'</td>'
+        + '<td>'+diffCell+'</td>'
+        + '</tr>';
+    });
+    html += '</tbody></table>';
+    box.innerHTML = html;
+    return;
+  }
+
+  // Tab de un parcial concreto
+  const p = clasTab;
+  const rows = activos
+    .map(t=>{
+      const acum = t.splits[p];
+      const prevAcum = p>0 ? t.splits[p-1] : 0;
+      const splitOnly = (acum!=null) ? (acum - (p>0 ? (t.splits[p-1]??0) : 0)) : null;
+      return {t, acum, splitOnly};
+    })
+    .sort((a,b)=>{
+      if(a.splitOnly==null && b.splitOnly==null) return 0;
+      if(a.splitOnly==null) return 1;
+      if(b.splitOnly==null) return -1;
+      return a.splitOnly - b.splitOnly;
+    });
+
+  let html = '<table class="clasTable"><thead><tr><th class="pos">#</th><th>Equipo</th>'
+    + '<th>Tiempo (acum. / parcial)</th><th>Diferencia (acum. / parcial)</th></tr></thead><tbody>';
+  rows.forEach((r,i)=>{
+    let timeCell = '–';
+    if(r.acum!=null){
+      timeCell = '<div class="tBig">'+fmtTime(r.acum)+'</div><div class="tSmall">'+fmtTime(r.splitOnly)+'</div>';
+    }
+    let diffCell = '–';
+    if(mine && mine.splits[p]!=null && r.acum!=null && !r.t.esMio){
+      const diffAcum = mine.splits[p] - r.acum;
+      const myPrev = p>0 ? (mine.splits[p-1]??0) : 0;
+      const mySplitOnly = mine.splits[p] - myPrev;
+      const diffSplit = mySplitOnly - r.splitOnly;
+      diffCell = '<div class="'+(diffAcum<=0?'diffGood':'diffBad')+'">'+fmtSigned(diffAcum)+'</div>'
+        + '<div class="diffSmall '+(diffSplit<=0?'diffGood':'diffBad')+'">'+fmtSigned(diffSplit)+'</div>';
+    }
+    html += '<tr class="'+(r.t.esMio?'mine':'')+'">'
+      + '<td class="pos">'+(i+1)+'</td>'
+      + '<td>'+(r.t.esMio?'★ ':'')+escapeHtml(r.t.name)+'</td>'
+      + '<td>'+timeCell+'</td>'
+      + '<td>'+diffCell+'</td>'
+      + '</tr>';
+  });
+  html += '</tbody></table>';
+  box.innerHTML = html;
+}
+
+/* ============================================================
+   ANÁLISIS — puestos y diferencias a lo largo de la regata
+   ============================================================ */
+let analysisTickHandle = null;
+const AN_PALETTE = ['#5b8def','#c77dff','#f2b134','#5ec8d8','#e8735c','#8bd17c','#e07bb0','#9fa8ad','#c9a13b','#7c93c9'];
+
+function openAnalysis(){
+  document.getElementById('screenRace').style.display = 'none';
+  document.getElementById('screenAnalysis').style.display = 'flex';
+  renderAnalysis();
+  if(analysisTickHandle) clearInterval(analysisTickHandle);
+  analysisTickHandle = setInterval(renderAnalysis, 1000);
+}
+function closeAnalysis(){
+  if(analysisTickHandle){ clearInterval(analysisTickHandle); analysisTickHandle = null; }
+  document.getElementById('screenAnalysis').style.display = 'none';
+  document.getElementById('screenRace').style.display = 'flex';
+}
+
+function computeAnalysisData(){
+  const activos = TEAMS.filter(t=>t.participa);
+  const mine = myTeam();
+  const N = CFG.numParciales;
+  const positions = {};
+  activos.forEach(t=>{ positions[t.id] = new Array(N).fill(null); });
+  for(let p=0;p<N;p++){
+    const withData = activos.filter(t=>t.splits[p]!=null).sort((a,b)=>a.splits[p]-b.splits[p]);
+    withData.forEach((t,i)=>{ positions[t.id][p] = i+1; });
+  }
+  const diffs = {};
+  activos.forEach(t=>{ diffs[t.id] = new Array(N).fill(null); });
+  if(mine){
+    for(let p=0;p<N;p++){
+      activos.forEach(t=>{
+        if(t.id === mine.id){ diffs[t.id][p] = 0; return; }
+        if(mine.splits[p]!=null && t.splits[p]!=null) diffs[t.id][p] = mine.splits[p] - t.splits[p];
+      });
+    }
+  }
+  return {activos, mine, N, positions, diffs};
+}
+
+function colorForTeam(t, idx, mineColor){ return t.esMio ? (mineColor||'var(--accent)') : AN_PALETTE[idx % AN_PALETTE.length]; }
+
+function buildLegend(activos, mineColor){
+  let idx = 0, html = '<div class="legend">';
+  activos.forEach(t=>{
+    const color = colorForTeam(t, idx, mineColor);
+    html += '<span class="legendItem"><span class="sw" style="background:'+color+'"></span>'+(t.esMio?'★ ':'')+escapeHtml(t.name)+'</span>';
+    if(!t.esMio) idx++;
+  });
+  html += '</div>';
+  return html;
+}
+
+function buildPositionsChart(data, opts){
+  opts = opts || {};
+  const gridColor = opts.gridColor || 'var(--border)';
+  const textColor = opts.textColor || 'var(--muted)';
+  const {activos, N, positions} = data;
+  const maxPos = Math.max(1, activos.length);
+  const W = Math.max(opts.minW||560, N*90+90), H = opts.height||300;
+  const padL=34, padR=16, padT=16, padB=34;
+  const plotW = W-padL-padR, plotH = H-padT-padB;
+  const xStep = N>1 ? plotW/(N-1) : 0;
+  const yFor = pos => padT + ((pos-1)/Math.max(1,maxPos-1))*plotH;
+  let svg = '<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'">';
+  for(let pos=1; pos<=maxPos; pos++){
+    const y = yFor(pos);
+    svg += '<line x1="'+padL+'" y1="'+y+'" x2="'+(W-padR)+'" y2="'+y+'" stroke="'+gridColor+'" stroke-width="1"/>';
+    svg += '<text x="'+(padL-8)+'" y="'+(y+3)+'" font-size="10" fill="'+textColor+'" text-anchor="end">'+pos+'</text>';
+  }
+  CFG.parcialNames.forEach((name,i)=>{
+    const x = padL + i*xStep;
+    svg += '<text x="'+x+'" y="'+(H-10)+'" font-size="10" fill="'+textColor+'" text-anchor="middle">'+escapeHtml(name)+'</text>';
+  });
+  let idx = 0;
+  activos.forEach(t=>{
+    const pts = positions[t.id];
+    let d='', started=false, dots='';
+    for(let p=0;p<N;p++){
+      if(pts[p]==null){ started=false; continue; }
+      const x = padL+p*xStep, y = yFor(pts[p]);
+      d += (started?'L':'M')+x+' '+y+' ';
+      started = true;
+      dots += '<circle cx="'+x+'" cy="'+y+'" r="'+(t.esMio?4:2.6)+'" fill="'+colorForTeam(t,idx,opts.mineColor)+'"><title>'+escapeHtml(t.name)+' — '+escapeHtml(CFG.parcialNames[p])+': '+pts[p]+'º</title></circle>';
+    }
+    const color = colorForTeam(t, idx, opts.mineColor);
+    if(d.trim()) svg += '<path d="'+d.trim()+'" fill="none" stroke="'+color+'" stroke-width="'+(t.esMio?3:1.6)+'" opacity="'+(t.esMio?1:.85)+'"/>';
+    svg += dots;
+    if(!t.esMio) idx++;
+  });
+  svg += '</svg>';
+  return svg;
+}
+
+function buildDiffChart(data, opts){
+  opts = opts || {};
+  const gridColor = opts.gridColor || 'var(--border)';
+  const textColor = opts.textColor || 'var(--muted)';
+  const badBg = opts.badBg || 'var(--bad-bg)';
+  const goodBg = opts.goodBg || 'var(--good-bg)';
+  const badColor = opts.badColor || 'var(--bad)';
+  const goodColor = opts.goodColor || 'var(--good)';
+  const {activos, N, diffs, mine} = data;
+  if(!mine) return '<div class="hint">Marca un equipo como ★ Mi equipo para ver este gráfico.</div>';
+  let maxAbs = 3000;
+  activos.forEach(t=>{ diffs[t.id].forEach(v=>{ if(v!=null) maxAbs = Math.max(maxAbs, Math.abs(v)); }); });
+  // Escala en segundos: paso "redondo" para ≤5 divisiones por lado; el máximo se ajusta a múltiplo del paso
+  const rawS = maxAbs*1.08/1000;
+  const STEPS = [0.5,1,2,5,10,15,20,30,60,120,300,600];
+  let stepS = STEPS[STEPS.length-1];
+  for(const s of STEPS){ if(rawS/s <= 5){ stepS = s; break; } }
+  const maxS = Math.ceil(rawS/stepS)*stepS;
+  maxAbs = maxS*1000;
+  const W = Math.max(opts.minW||560, N*90+90), H = opts.height||300;
+  const padL=62, padR=16, padT=16, padB=34;
+  const plotW = W-padL-padR, plotH = H-padT-padB;
+  const xStep = N>1 ? plotW/(N-1) : 0;
+  const yFor = v => padT + plotH/2 - (v/maxAbs)*(plotH/2);
+  let svg = '<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'">';
+  svg += '<rect x="'+padL+'" y="'+padT+'" width="'+plotW+'" height="'+(plotH/2)+'" fill="'+badBg+'"/>';
+  svg += '<rect x="'+padL+'" y="'+(padT+plotH/2)+'" width="'+plotW+'" height="'+(plotH/2)+'" fill="'+goodBg+'"/>';
+  const y0 = yFor(0);
+  // Rejilla y etiquetas del eje Y (segundos). Positivo = te sacan; negativo = les sacas.
+  const fmtTick = s => { const a = Math.abs(s); const txt = (a%1===0 ? String(a) : a.toFixed(1)).replace('.',','); return s>0 ? '+'+txt : s<0 ? '−'+txt : '0'; };
+  for(let k=-Math.round(maxS/stepS); k<=Math.round(maxS/stepS); k++){
+    const s = k*stepS, y = yFor(s*1000);
+    if(k!==0) svg += '<line x1="'+padL+'" y1="'+y+'" x2="'+(W-padR)+'" y2="'+y+'" stroke="'+gridColor+'" stroke-width="1" stroke-dasharray="3 3"/>';
+    svg += '<line x1="'+(padL-4)+'" y1="'+y+'" x2="'+padL+'" y2="'+y+'" stroke="'+textColor+'" stroke-width="1"/>';
+    svg += '<text x="'+(padL-8)+'" y="'+(y+3.5)+'" font-size="10" fill="'+textColor+'" text-anchor="end">'+fmtTick(s)+'</text>';
+  }
+  svg += '<line x1="'+padL+'" y1="'+padT+'" x2="'+padL+'" y2="'+(H-padB)+'" stroke="'+textColor+'" stroke-width="1"/>';
+  svg += '<text transform="translate(11 '+(padT+plotH/2)+') rotate(-90)" font-size="10" fill="'+textColor+'" text-anchor="middle">diferencia (s)</text>';
+  svg += '<line x1="'+padL+'" y1="'+y0+'" x2="'+(W-padR)+'" y2="'+y0+'" stroke="'+textColor+'" stroke-width="1.5"/>';
+  svg += '<text x="'+(padL+6)+'" y="'+(padT+12)+'" font-size="9" fill="'+badColor+'">te sacan</text>';
+  svg += '<text x="'+(padL+6)+'" y="'+(H-padB-5)+'" font-size="9" fill="'+goodColor+'">les sacas</text>';
+  CFG.parcialNames.forEach((name,i)=>{
+    const x = padL + i*xStep;
+    svg += '<text x="'+x+'" y="'+(H-10)+'" font-size="10" fill="'+textColor+'" text-anchor="middle">'+escapeHtml(name)+'</text>';
+  });
+  let idx = 0;
+  activos.forEach(t=>{
+    if(t.esMio) return;
+    const arr = diffs[t.id];
+    let d='', started=false, dots='';
+    for(let p=0;p<N;p++){
+      if(arr[p]==null){ started=false; continue; }
+      const x = padL+p*xStep, y = yFor(arr[p]);
+      d += (started?'L':'M')+x+' '+y+' ';
+      started = true;
+      dots += '<circle cx="'+x+'" cy="'+y+'" r="2.8" fill="'+colorForTeam(t,idx,opts.mineColor)+'"><title>'+escapeHtml(t.name)+' — '+escapeHtml(CFG.parcialNames[p])+': '+fmtSigned(arr[p])+'</title></circle>';
+    }
+    const color = colorForTeam(t, idx, opts.mineColor);
+    if(d.trim()) svg += '<path d="'+d.trim()+'" fill="none" stroke="'+color+'" stroke-width="1.8" opacity=".9"/>';
+    svg += dots;
+    idx++;
+  });
+  svg += '</svg>';
+  return svg;
+}
+
+let anSortState = {col:null, dir:1}; // col: null (por defecto) | 'name' | índice de parcial
+function anSortBy(col){
+  if(anSortState.col === col) anSortState.dir *= -1;
+  else { anSortState.col = col; anSortState.dir = 1; }
+  renderAnalysis();
+}
+function anSortArrow(col){
+  if(anSortState.col !== col) return ' <span class="sortIcon">⇅</span>';
+  return anSortState.dir === 1 ? ' ▲' : ' ▼';
+}
+
+function renderAnalysisTable(data){
+  const {activos, N, positions, diffs} = data;
+  let rows;
+  if(anSortState.col === 'name'){
+    rows = activos.slice().sort((a,b)=> anSortState.dir * a.name.localeCompare(b.name, 'es'));
+  } else if(typeof anSortState.col === 'number'){
+    const p = anSortState.col;
+    rows = activos.slice().sort((a,b)=>{
+      const ta = a.splits[p], tb = b.splits[p];
+      if(ta==null && tb==null) return 0;
+      if(ta==null) return 1;
+      if(tb==null) return -1;
+      return anSortState.dir * (ta - tb);
+    });
+  } else {
+    rows = activos.slice().sort((a,b)=>{
+      const pa = positions[a.id][N-1], pb = positions[b.id][N-1];
+      if(pa!=null && pb!=null) return pa-pb;
+      if(pa!=null) return -1;
+      if(pb!=null) return 1;
+      return b.splits.filter(s=>s!=null).length - a.splits.filter(s=>s!=null).length;
+    });
+  }
+  let html = '<div class="analysisTableWrap"><table class="anTable"><thead><tr>'
+    + '<th rowspan="2" class="anSortable" onclick="anSortBy(\'name\')">Equipo'+anSortArrow('name')+'</th>';
+  CFG.parcialNames.forEach(n=>{ html += '<th colspan="3">'+escapeHtml(n)+'</th>'; });
+  html += '</tr><tr>';
+  CFG.parcialNames.forEach((n,p)=>{
+    html += '<th class="anSortable" onclick="anSortBy('+p+')">Pos'+anSortArrow(p)+'</th>'
+      + '<th class="anSortable" onclick="anSortBy('+p+')">Tiempo'+anSortArrow(p)+'</th>'
+      + '<th>Dif.</th>';
+  });
+  html += '</tr></thead><tbody>';
+  rows.forEach(t=>{
+    html += '<tr class="'+(t.esMio?'mine':'')+'"><td>'+(t.esMio?'★ ':'')+escapeHtml(t.name)+'</td>';
+    for(let p=0;p<N;p++){
+      const pos = positions[t.id][p], time = t.splits[p], diff = diffs[t.id][p];
+      html += '<td>'+(pos??'–')+'</td><td>'+fmtTime(time)+'</td>';
+      if(t.esMio) html += '<td class="tSmall">ref.</td>';
+      else if(diff!=null) html += '<td class="'+(diff<=0?'diffGood':'diffBad')+'">'+fmtSigned(diff)+'</td>';
+      else html += '<td>–</td>';
+    }
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+
+function renderAnalysis(){
+  if(!CFG) return;
+  const data = computeAnalysisData();
+  const box = document.getElementById('analysisContent');
+  let html = '<h3>Evolución de puestos</h3><div class="chartWrap">'+buildPositionsChart(data)+'</div>'+buildLegend(data.activos);
+  html += '<h3>Evolución de diferencia acumulada respecto a mi equipo</h3><div class="chartWrap">'+buildDiffChart(data)+'</div>';
+  if(data.mine) html += buildLegend(data.activos.filter(t=>!t.esMio));
+  html += '<h3>Tabla resumen</h3><div class="hint" style="margin:0 2px 8px">Toca "Equipo" o "Tiempo" de cualquier parcial para ordenar la tabla; vuelve a tocar para invertir el orden.</div>'+renderAnalysisTable(data);
+  box.innerHTML = html;
+}
+
+/* ============================================================
+   DIVISOR ARRASTRABLE
+   ============================================================ */
+let dividerReady = false;
+function setupDivider(){
+  if(dividerReady) return;   // evita acumular listeners al iniciar varias regatas
+  dividerReady = true;
+  const divider = document.getElementById('divider');
+  const colTimers = document.getElementById('colTimers');
+  const raceBody = document.getElementById('raceBody');
+  let dragging = false;
+  divider.addEventListener('pointerdown', e=>{
+    dragging = true;
+    divider.classList.add('dragging');
+    divider.setPointerCapture(e.pointerId);
+  });
+  divider.addEventListener('pointermove', e=>{
+    if(!dragging) return;
+    const rect = raceBody.getBoundingClientRect();
+    let w = e.clientX - rect.left;
+    const minW = 200, maxW = rect.width - 200 - 8;
+    w = Math.max(minW, Math.min(maxW, w));
+    colTimers.style.flex = '0 0 '+w+'px';
+  });
+  function stop(e){ dragging = false; divider.classList.remove('dragging'); }
+  divider.addEventListener('pointerup', stop);
+  divider.addEventListener('pointercancel', stop);
+}
+
+/* ============================================================
+   TEMA
+   ============================================================ */
+function toggleTheme(){
+  const html = document.documentElement;
+  const cur = html.getAttribute('data-theme');
+  const next = cur === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  const label = next === 'dark' ? '☀ Claro' : '☾ Oscuro';
+  document.getElementById('themeBtnSetup').textContent = label;
+  document.getElementById('themeBtnRace').textContent = label;
+  const anBtn = document.getElementById('themeBtnAnalysis');
+  if(anBtn) anBtn.textContent = label;
+}
+
+/* ============================================================
+   EXPORTAR PDF (window.print — sin dependencias externas)
+   ============================================================ */
+function exportPDF(){
+  const pend = TEAMS.filter(t=>t.participa && !t.finished).length;
+  if(pend && !confirm('Faltan '+pend+' equipo(s) por terminar.\nEl PDF saldrá incompleto (tiempos sin registrar en blanco). ¿Continuar?')) return;
+  const mine = myTeam();
+  const activos = TEAMS.filter(t=>t.participa);
+  const N = CFG.numParciales;
+  let html = '';
+
+  function pageFirst(){
+    const rows = activos.map(t=>({t, acum:t.splits[0]}))
+      .sort((a,b)=>(a.acum??Infinity)-(b.acum??Infinity));
+    let h = '<div class="printPage"><h2>'+escapeHtml(CFG.parcialNames[0])+'</h2><h3>Tiempos hasta el primer parcial</h3>';
+    h += '<table class="printTable"><thead><tr><th>#</th><th>Equipo</th><th>Tiempo</th><th>Diferencia</th></tr></thead><tbody>';
+    rows.forEach((r,i)=>{
+      let diff = '–', cls='';
+      if(mine && mine.splits[0]!=null && r.acum!=null && !r.t.esMio){
+        const d = mine.splits[0]-r.acum; cls = d<=0?'pGood':'pBad'; diff = fmtSigned(d);
+      }
+      h += '<tr><td>'+(i+1)+'</td><td>'+(r.t.esMio?'★ ':'')+escapeHtml(r.t.name)+'</td><td>'+fmtTime(r.acum)+'</td><td class="'+cls+'">'+diff+'</td></tr>';
+    });
+    h += '</tbody></table></div>';
+    return h;
+  }
+
+  function pageMiddle(p){
+    const rows = activos.map(t=>{
+      const acum = t.splits[p];
+      const prev = t.splits[p-1]??0;
+      const splitOnly = acum!=null ? acum-prev : null;
+      return {t, acum, splitOnly};
+    }).sort((a,b)=>(a.splitOnly??Infinity)-(b.splitOnly??Infinity));
+    let h = '<div class="printPage"><h2>'+escapeHtml(CFG.parcialNames[p])+'</h2><h3>Ordenado por tiempo de este parcial</h3>';
+    h += '<table class="printTable"><thead><tr><th>#</th><th>Equipo</th><th>Tiempo parcial</th><th>Dif. parcial</th><th>Tiempo acumulado</th><th>Dif. acumulada</th></tr></thead><tbody>';
+    const myPrev = mine ? (mine.splits[p-1]??0) : null;
+    const mySplitOnly = mine && mine.splits[p]!=null ? mine.splits[p]-myPrev : null;
+    rows.forEach((r,i)=>{
+      let dSplit='–', dAcum='–', c1='', c2='';
+      if(mine && mySplitOnly!=null && r.splitOnly!=null && !r.t.esMio){
+        const d1 = mySplitOnly - r.splitOnly; c1 = d1<=0?'pGood':'pBad'; dSplit = fmtSigned(d1);
+      }
+      if(mine && mine.splits[p]!=null && r.acum!=null && !r.t.esMio){
+        const d2 = mine.splits[p]-r.acum; c2 = d2<=0?'pGood':'pBad'; dAcum = fmtSigned(d2);
+      }
+      h += '<tr><td>'+(i+1)+'</td><td>'+(r.t.esMio?'★ ':'')+escapeHtml(r.t.name)+'</td>'
+        +'<td>'+fmtTime(r.splitOnly)+'</td><td class="'+c1+'">'+dSplit+'</td>'
+        +'<td>'+fmtTime(r.acum)+'</td><td class="'+c2+'">'+dAcum+'</td></tr>';
+    });
+    h += '</tbody></table></div>';
+    return h;
+  }
+
+  function pageFinal(){
+    const last = N-1;
+    const rows = activos.map(t=>({t}))
+      .sort((a,b)=>(a.t.splits[last]??Infinity)-(b.t.splits[last]??Infinity));
+    let h = '<div class="printPage"><h2>Clasificación final — '+escapeHtml(CFG.parcialNames[last])+'</h2>';
+    h += '<table class="printTable"><thead><tr><th>#</th><th>Equipo</th><th>Tiempo total</th><th>Dif. total</th>';
+    CFG.parcialNames.forEach(n=>{ h += '<th>Acum. '+escapeHtml(n)+'</th><th>Dif. parcial</th><th>Dif. acum.</th>'; });
+    h += '</tr></thead><tbody>';
+    rows.forEach((r,i)=>{
+      const t = r.t;
+      let dTotal='–', cT='';
+      if(mine && mine.splits[last]!=null && t.splits[last]!=null && !t.esMio){
+        const d = mine.splits[last]-t.splits[last]; cT = d<=0?'pGood':'pBad'; dTotal = fmtSigned(d);
+      }
+      h += '<tr><td>'+(i+1)+'</td><td>'+(t.esMio?'★ ':'')+escapeHtml(t.name)+'</td><td>'+fmtTime(t.splits[last])+'</td><td class="'+cT+'">'+dTotal+'</td>';
+      for(let p=0;p<N;p++){
+        const acum = t.splits[p];
+        const prev = p>0 ? (t.splits[p-1]??0) : 0;
+        const splitOnly = acum!=null ? acum-prev : null;
+        let dSplit='–', dAcum='–', c1='', c2='';
+        if(mine && !t.esMio){
+          const myPrev = p>0 ? (mine.splits[p-1]??0) : 0;
+          const mySplitOnly = mine.splits[p]!=null ? mine.splits[p]-myPrev : null;
+          if(mySplitOnly!=null && splitOnly!=null){ const d1=mySplitOnly-splitOnly; c1=d1<=0?'pGood':'pBad'; dSplit=fmtSigned(d1); }
+          if(mine.splits[p]!=null && acum!=null){ const d2=mine.splits[p]-acum; c2=d2<=0?'pGood':'pBad'; dAcum=fmtSigned(d2); }
+        }
+        h += '<td>'+fmtTime(acum)+'</td><td class="'+c1+'">'+dSplit+'</td><td class="'+c2+'">'+dAcum+'</td>';
+      }
+      h += '</tr>';
+    });
+    h += '</tbody></table></div>';
+    return h;
+  }
+
+  function pageAnalysis(){
+    const data = computeAnalysisData();
+    const PRINT_OPTS = {
+      mineColor:'#b5661b', gridColor:'#bbb', textColor:'#555',
+      badBg:'#f8d7d7', goodBg:'#d9f2df', badColor:'#c0392b', goodColor:'#1a8f2c',
+      minW:900, height:190 // formato apaisado para que las dos gráficas quepan en una página A4
+    };
+    let h = '<div class="printPage"><h2>Análisis — evolución de puestos y diferencias</h2>';
+    h += '<h3 style="margin:0 0 2mm;font-size:9.5pt;">Evolución de puestos</h3>';
+    h += '<div class="printChartWrap">'+buildPositionsChart(data, PRINT_OPTS)+'</div>';
+    h += '<div class="printLegend">'+buildLegendPlain(data.activos, PRINT_OPTS.mineColor)+'</div>';
+    if(data.mine){
+      h += '<h3 style="margin:0 0 2mm;font-size:9.5pt;">Diferencia acumulada respecto a mi equipo</h3>';
+      h += '<div class="printChartWrap">'+buildDiffChart(data, PRINT_OPTS)+'</div>';
+      h += '<div class="printLegend">'+buildLegendPlain(data.activos.filter(t=>!t.esMio), PRINT_OPTS.mineColor)+'</div>';
+    }
+    h += '</div>';
+    return h;
+  }
+  function buildLegendPlain(activos, mineColor){
+    let idx=0, h='';
+    activos.forEach(t=>{
+      const color = colorForTeam(t, idx, mineColor);
+      h += '<span><span class="sw" style="background:'+color+'"></span>'+(t.esMio?'★ ':'')+escapeHtml(t.name)+'</span>';
+      if(!t.esMio) idx++;
+    });
+    return h;
+  }
+
+  if(N === 1){
+    html = pageFinal();
+  } else {
+    html = pageFirst();
+    for(let p=1;p<N-1;p++) html += pageMiddle(p);
+    html += pageFinal();
+  }
+  html += pageAnalysis();
+
+  // Cabecera con nombre y fecha de la regata en todas las páginas
+  const head = '<div class="printRaceHead"><strong>'+escapeHtml(CFG.raceName)+'</strong><span>'+escapeHtml(formatDateEs(CFG.raceDate))+'</span></div>';
+  html = html.split('<div class="printPage">').join('<div class="printPage">'+head);
+
+  document.getElementById('printArea').innerHTML = html;
+  // El título del documento sugiere el nombre del PDF al guardar
+  const prevTitle = document.title;
+  document.title = exportFileName(CFG).replace(/\.xlsx$/,'');
+  window.addEventListener('afterprint', function restore(){
+    document.title = prevTitle;
+    window.removeEventListener('afterprint', restore);
+  });
+  window.print();
+}
+
+/* ============================================================
+   EXPORTAR EXCEL (.xlsx plano, sin dependencias)
+   Una fila por equipo y parcial; regata y fecha en cada fila.
+   Tiempos en segundos. Dif. = mi equipo − equipo de la fila
+   (negativo = mi equipo es más rápido; positivo = va por delante).
+   ============================================================ */
+function todayIso(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function formatDateEs(iso){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso||'');
+  return m ? m[3]+'/'+m[2]+'/'+m[1] : (iso||'');
+}
+function isoToExcelSerial(iso){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso||'');
+  if(!m) return null;
+  return Math.round((Date.UTC(+m[1], +m[2]-1, +m[3]) - Date.UTC(1899,11,30)) / 86400000);
+}
+
+const EXPORT_HEADERS = ['Regata','Fecha','Equipo','Mi equipo','Tanda','Parcial nº','Parcial',
+  'Tiempo acumulado (s)','Tiempo tramo (s)','Pos. acumulada','Pos. tramo',
+  'Dif. acumulada vs mi equipo (s)','Dif. tramo vs mi equipo (s)'];
+// estilos: 0 normal, 2 fecha dd/mm/yyyy, 3 número 0.0
+const EXPORT_COL_STYLES = [0,2,0,0,0,0,0,3,3,0,0,3,3];
+const EXPORT_COL_WIDTHS = [32,12,26,10,7,10,18,20,17,14,11,30,26];
+
+function buildExportRows(cfg, teams){
+  const activos = teams.filter(t=>t.participa);
+  const mine = activos.find(t=>t.esMio) || null;
+  const N = cfg.numParciales;
+  const sec = ms => ms==null ? null : Math.round(ms)/1000;
+  const tramoOf = (t,p)=>{
+    const a = t.splits[p];
+    if(a==null) return null;
+    if(p===0) return a;
+    const prev = t.splits[p-1];
+    return prev==null ? null : a - prev;
+  };
+  const posAcum = {}, posTramo = {};
+  activos.forEach(t=>{ posAcum[t.id] = new Array(N).fill(null); posTramo[t.id] = new Array(N).fill(null); });
+  for(let p=0;p<N;p++){
+    activos.filter(t=>t.splits[p]!=null).sort((a,b)=>a.splits[p]-b.splits[p])
+      .forEach((t,i)=>{ posAcum[t.id][p] = i+1; });
+    activos.filter(t=>tramoOf(t,p)!=null).sort((a,b)=>tramoOf(a,p)-tramoOf(b,p))
+      .forEach((t,i)=>{ posTramo[t.id][p] = i+1; });
+  }
+  const dateSerial = isoToExcelSerial(cfg.raceDate);
+  const rows = [];
+  activos.forEach(t=>{
+    for(let p=0;p<N;p++){
+      const acum = t.splits[p], tramo = tramoOf(t,p);
+      let dAcum = null, dTramo = null;
+      if(mine){
+        if(mine.splits[p]!=null && acum!=null) dAcum = mine.splits[p] - acum;
+        const mt = tramoOf(mine,p);
+        if(mt!=null && tramo!=null) dTramo = mt - tramo;
+      }
+      rows.push([cfg.raceName, dateSerial, t.name, t.esMio ? 'Sí' : 'No', t.heat+1, p+1, cfg.parcialNames[p],
+        sec(acum), sec(tramo), posAcum[t.id][p], posTramo[t.id][p], sec(dAcum), sec(dTramo)]);
+    }
+  });
+  return rows;
+}
+
+function xmlEsc(s){
+  return String(s)
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function colLetter(i){
+  let s = '', n = i+1;
+  while(n>0){ const m = (n-1)%26; s = String.fromCharCode(65+m)+s; n = Math.floor((n-1)/26); }
+  return s;
+}
+function cellXml(ref, v, style){
+  if(v==null || v==='') return '';
+  const st = style ? ' s="'+style+'"' : '';
+  if(typeof v === 'number') return '<c r="'+ref+'"'+st+'><v>'+v+'</v></c>';
+  return '<c r="'+ref+'" t="inlineStr"'+st+'><is><t xml:space="preserve">'+xmlEsc(v)+'</t></is></c>';
+}
+function buildSheetXml(headers, rows, colStyles, colWidths){
+  const nCols = headers.length, nRows = rows.length+1;
+  const lastCol = colLetter(nCols-1);
+  let x = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    + '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+    + '<dimension ref="A1:'+lastCol+nRows+'"/>'
+    + '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>'
+    + '<selection pane="bottomLeft" activeCell="A2" sqref="A2"/></sheetView></sheetViews>'
+    + '<sheetFormatPr defaultRowHeight="15"/>'
+    + '<cols>' + colWidths.map((w,i)=>'<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+w+'" customWidth="1"/>').join('') + '</cols>'
+    + '<sheetData>';
+  x += '<row r="1">' + headers.map((h,i)=>cellXml(colLetter(i)+'1', h, 1)).join('') + '</row>';
+  rows.forEach((r,ri)=>{
+    const rn = ri+2;
+    x += '<row r="'+rn+'">' + r.map((v,ci)=>cellXml(colLetter(ci)+rn, v, colStyles[ci])).join('') + '</row>';
+  });
+  x += '</sheetData><autoFilter ref="A1:'+lastCol+nRows+'"/></worksheet>';
+  return x;
+}
+
+const CRC_TABLE = (function(){
+  const t = new Uint32Array(256);
+  for(let n=0;n<256;n++){
+    let c = n;
+    for(let k=0;k<8;k++) c = (c & 1) ? (0xEDB88320 ^ (c>>>1)) : (c>>>1);
+    t[n] = c>>>0;
+  }
+  return t;
+})();
+function crc32(bytes){
+  let c = 0xFFFFFFFF;
+  for(let i=0;i<bytes.length;i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c>>>8);
+  return (c ^ 0xFFFFFFFF)>>>0;
+}
+function zipStored(files){ // files: [{name, data: Uint8Array}] → Uint8Array (zip sin compresión)
+  const enc = new TextEncoder();
+  const now = new Date();
+  const dosTime = (now.getHours()<<11) | (now.getMinutes()<<5) | (now.getSeconds()>>1);
+  const dosDate = ((now.getFullYear()-1980)<<9) | ((now.getMonth()+1)<<5) | now.getDate();
+  const parts = [], central = [];
+  let offset = 0;
+  files.forEach(f=>{
+    const name = enc.encode(f.name), data = f.data, crc = crc32(data);
+    const lh = new Uint8Array(30+name.length), dv = new DataView(lh.buffer);
+    dv.setUint32(0,0x04034b50,true); dv.setUint16(4,20,true); dv.setUint16(6,0,true); dv.setUint16(8,0,true);
+    dv.setUint16(10,dosTime,true); dv.setUint16(12,dosDate,true); dv.setUint32(14,crc,true);
+    dv.setUint32(18,data.length,true); dv.setUint32(22,data.length,true);
+    dv.setUint16(26,name.length,true); dv.setUint16(28,0,true);
+    lh.set(name,30);
+    parts.push(lh, data);
+    const ch = new Uint8Array(46+name.length), cv = new DataView(ch.buffer);
+    cv.setUint32(0,0x02014b50,true); cv.setUint16(4,20,true); cv.setUint16(6,20,true);
+    cv.setUint16(8,0,true); cv.setUint16(10,0,true);
+    cv.setUint16(12,dosTime,true); cv.setUint16(14,dosDate,true); cv.setUint32(16,crc,true);
+    cv.setUint32(20,data.length,true); cv.setUint32(24,data.length,true);
+    cv.setUint16(28,name.length,true); cv.setUint16(30,0,true); cv.setUint16(32,0,true);
+    cv.setUint16(34,0,true); cv.setUint16(36,0,true); cv.setUint32(38,0,true); cv.setUint32(42,offset,true);
+    ch.set(name,46);
+    central.push(ch);
+    offset += lh.length + data.length;
+  });
+  const cdSize = central.reduce((s,c)=>s+c.length,0);
+  const end = new Uint8Array(22), ev = new DataView(end.buffer);
+  ev.setUint32(0,0x06054b50,true); ev.setUint16(4,0,true); ev.setUint16(6,0,true);
+  ev.setUint16(8,files.length,true); ev.setUint16(10,files.length,true);
+  ev.setUint32(12,cdSize,true); ev.setUint32(16,offset,true); ev.setUint16(20,0,true);
+  const all = parts.concat(central, [end]);
+  const out = new Uint8Array(all.reduce((s,a)=>s+a.length,0));
+  let pos = 0;
+  all.forEach(a=>{ out.set(a,pos); pos += a.length; });
+  return out;
+}
+
+function buildXlsx(cfg, teams){
+  const rows = buildExportRows(cfg, teams);
+  const nRows = rows.length+1, lastCol = colLetter(EXPORT_HEADERS.length-1);
+  const NS = 'http://schemas.openxmlformats.org/';
+  const enc = new TextEncoder();
+  const hdr = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  const files = [
+    {name:'[Content_Types].xml', text: hdr
+      + '<Types xmlns="'+NS+'package/2006/content-types">'
+      + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+      + '<Default Extension="xml" ContentType="application/xml"/>'
+      + '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+      + '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+      + '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+      + '</Types>'},
+    {name:'_rels/.rels', text: hdr
+      + '<Relationships xmlns="'+NS+'package/2006/relationships">'
+      + '<Relationship Id="rId1" Type="'+NS+'officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+      + '</Relationships>'},
+    {name:'xl/workbook.xml', text: hdr
+      + '<workbook xmlns="'+NS+'spreadsheetml/2006/main" xmlns:r="'+NS+'officeDocument/2006/relationships">'
+      + '<sheets><sheet name="Datos" sheetId="1" r:id="rId1"/></sheets>'
+      + '<definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">Datos!$A$1:$'+lastCol+'$'+nRows+'</definedName></definedNames>'
+      + '</workbook>'},
+    {name:'xl/_rels/workbook.xml.rels', text: hdr
+      + '<Relationships xmlns="'+NS+'package/2006/relationships">'
+      + '<Relationship Id="rId1" Type="'+NS+'officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
+      + '<Relationship Id="rId2" Type="'+NS+'officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+      + '</Relationships>'},
+    {name:'xl/styles.xml', text: hdr
+      + '<styleSheet xmlns="'+NS+'spreadsheetml/2006/main">'
+      + '<numFmts count="2"><numFmt numFmtId="164" formatCode="dd/mm/yyyy"/><numFmt numFmtId="165" formatCode="0.0"/></numFmts>'
+      + '<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>'
+      + '<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>'
+      + '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
+      + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+      + '<cellXfs count="4">'
+      + '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+      + '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
+      + '<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>'
+      + '<xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>'
+      + '</cellXfs>'
+      + '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
+      + '</styleSheet>'},
+    {name:'xl/worksheets/sheet1.xml', text: buildSheetXml(EXPORT_HEADERS, rows, EXPORT_COL_STYLES, EXPORT_COL_WIDTHS)}
+  ];
+  return zipStored(files.map(f=>({name:f.name, data:enc.encode(f.text)})));
+}
+
+function exportFileName(cfg){
+  const base = String(cfg.raceName).normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[^A-Za-z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,60) || 'regata';
+  return 'Regata_'+base+'_'+cfg.raceDate+'.xlsx';
+}
+function exportExcel(){
+  if(!CFG) return;
+  const bytes = buildXlsx(CFG, TEAMS);
+  const blob = new Blob([bytes], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = exportFileName(CFG);
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+document.getElementById('inRaceDate').value = todayIso();
+onCoreChange();
+renderParcialList();
+maybeRestore();
+
+/* ============================================================
+   PWA — Service Worker
+   Solo se registra al servirse desde un servidor web (https o
+   localhost). Abriendo el HTML suelto (file://) no hace nada y
+   la aplicación funciona exactamente igual.
+   ============================================================ */
+let swWaiting = null;
+let updateRequested = false;   // solo recargamos si el usuario pulsa "Actualizar"
+function applyUpdate(){
+  updateRequested = true;
+  document.getElementById('updateBar').style.display = 'none';
+  if(!swWaiting){ location.reload(); return; }
+  swWaiting.postMessage('SKIP_WAITING');
+}
+(function registerSW(){
+  if(!('serviceWorker' in navigator)) return;
+  const ok = location.protocol === 'https:' || ['localhost','127.0.0.1'].includes(location.hostname);
+  if(!ok) return;
+
+  navigator.serviceWorker.register('sw.js').then(reg=>{
+    // Una actualización ya esperando (pestaña abierta de antes)
+    if(reg.waiting) showUpdate(reg.waiting);
+    reg.addEventListener('updatefound', ()=>{
+      const nw = reg.installing;
+      if(!nw) return;
+      nw.addEventListener('statechange', ()=>{
+        // controller != null significa que no es la primera instalación
+        if(nw.state === 'installed' && navigator.serviceWorker.controller) showUpdate(nw);
+      });
+    });
+  }).catch(()=>{ /* sin service worker la app sigue funcionando online */ });
+
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+    // En la primera visita el service worker toma el control sin que haya
+    // actualización: recargar ahí sería gratuito y, en plena regata,
+    // molesto. Solo se recarga si el usuario ha pedido actualizar.
+    if(reloading || !updateRequested) return;
+    reloading = true;
+    location.reload();
+  });
+
+  function showUpdate(worker){
+    // Durante una regata en curso no se interrumpe: el aviso espera a que termine
+    swWaiting = worker;
+    document.getElementById('updateBar').style.display = 'flex';
+  }
+})();
+</script>
+</body>
+</html>

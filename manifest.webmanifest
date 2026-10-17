@@ -1,0 +1,20 @@
+{
+  "name": "Cronometraje de Regatas",
+  "short_name": "Regatas",
+  "description": "Cronometraje de regatas de traineras: tiempos por parcial, clasificación en directo, análisis y exportación a PDF y Excel.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#eef1f5",
+  "theme_color": "#0f141c",
+  "lang": "es",
+  "dir": "ltr",
+  "categories": ["sports", "utilities", "productivity"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

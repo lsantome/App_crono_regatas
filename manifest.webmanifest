@@ -1,7 +1,7 @@
 {
   "name": "Cronometraje de Regatas",
   "short_name": "Regatas",
-  "description": "Cronometraje de regatas de traineras: tiempos por parcial, clasificación en directo, análisis y exportación a PDF y Excel.",
+  "description": "Cronometraje de regatas: tiempos por parcial, clasificación en directo, análisis y exportación a PDF y Excel.",
   "id": "./",
   "start_url": "./",
   "scope": "./",

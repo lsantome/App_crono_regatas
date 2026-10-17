@@ -28,7 +28,9 @@ const PRECACHE = [
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(c => c.addAll(PRECACHE))
+      // cache:'reload' ignora la caché HTTP del navegador: sin esto, una versión
+      // nueva podría precachear copias antiguas que el servidor aún da por válidas
+      .then(c => c.addAll(PRECACHE.map(u => new Request(u, { cache: 'reload' }))))
       // Un archivo que falle no debe impedir la instalación del resto
       .catch(err => console.warn('[sw] precaché incompleta:', err))
   );
@@ -56,9 +58,12 @@ self.addEventListener('fetch', event => {
   if (req.mode === 'navigate') {
     event.respondWith((async () => {
       try {
-        const fresh = await fetch(req);
+        // 'no-cache' = revalidar siempre con el servidor (respuesta 304 si no hay
+        // cambios, así que es barato). Sin esto, la caché HTTP de GitHub Pages
+        // puede servir el HTML antiguo durante minutos aunque ya haya uno nuevo.
+        const fresh = await fetch(req, { cache: 'no-cache' });
         const cache = await caches.open(CACHE_NAME);
-        cache.put('./index.html', fresh.clone());
+        if (fresh.ok && !fresh.redirected) cache.put('./index.html', fresh.clone());
         return fresh;
       } catch (e) {
         const cached = await caches.match('./index.html');

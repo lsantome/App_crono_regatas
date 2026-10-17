@@ -1,6 +1,6 @@
 # Cronometraje de Regatas — PWA
 
-Aplicación para cronometrar regatas de traineras: tiempos por parcial, clasificación
+Aplicación para cronometrar regatas: tiempos por parcial, clasificación
 en directo, análisis de puestos y diferencias, y exportación a PDF y Excel.
 
 Funciona sin conexión y se instala en el móvil como una app más.
@@ -38,9 +38,14 @@ se describen abajo, así que tendrías que subir `CACHE_VERSION` a mano en cada 
 `.github/workflows/deploy.yml` se ejecuta en cada push a `main` y también a mano
 desde la pestaña *Actions*. Hace tres cosas:
 
-**Sella la versión del service worker.** Sustituye `CACHE_VERSION` por el hash
+**Sella la versión.** Sustituye `CACHE_VERSION` del service worker por el hash
 corto del commit, así que cada despliegue genera una caché nueva y los usuarios
 reciben el aviso de actualización. Es el paso que, hecho a mano, se olvida.
+El mismo hash y la fecha de compilación se estampan en `index.html` y la app los
+muestra al pie de la pantalla de configuración (*Versión a1b2c3d · 17/10/2026*).
+Tras publicar un cambio, compara ese hash con el del último commit en GitHub: si
+coincide, el dispositivo tiene la versión nueva; si no, sigue con la anterior.
+Abriendo el HTML en local aparece *Versión desarrollo*.
 
 **Comprueba que no falta nada.** Verifica que están el HTML, el manifest, el
 service worker y los cinco iconos, y que ninguno está vacío.

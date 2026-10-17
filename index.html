@@ -61,7 +61,8 @@
   .themeBtn{background:var(--card2);border:1px solid var(--border);color:var(--text);
     border-radius:var(--radius-sm);padding:9px 15px;font-size:.9rem;}
   fieldset{border:1px solid var(--border);border-left:3px solid var(--accent2);border-radius:var(--radius-md);
-    padding:16px 18px 20px;margin-bottom:16px;background:var(--card);box-shadow:var(--shadow);}
+    padding:16px 18px 20px;margin-bottom:16px;background:var(--card);box-shadow:var(--shadow);
+    min-width:0;}   /* sin esto el fieldset no se encoge por debajo de su contenido y desborda en móvil */
   legend{padding:0 8px;color:var(--accent2);font-weight:700;font-size:.9rem;letter-spacing:.2px;}
   .row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;}
   .field{display:flex;flex-direction:column;gap:5px;min-width:130px;}
@@ -73,6 +74,9 @@
   .radioGroup{display:flex;gap:16px;flex-wrap:wrap;align-items:center;}
   .radioGroup label{display:flex;align-items:center;gap:7px;font-size:.92rem;padding:8px 4px;}
   .hint{font-size:.78rem;color:var(--muted);margin-top:2px;}
+  .appVersion{margin:18px 0 6px;text-align:center;font-size:.74rem;color:var(--muted);letter-spacing:.2px;
+    font-variant-numeric:tabular-nums;user-select:all;}
+  .appVersion b{font-weight:600;color:var(--text);}
   .warn{color:var(--bad);font-weight:600;}
   .ok{color:var(--good);font-weight:600;}
 
@@ -233,6 +237,11 @@
     #screenSetup{padding:16px 14px 0;}
     .row{gap:10px;}
     .field{min-width:0;flex:1 1 45%;}
+    fieldset{padding:14px 12px 16px;}
+    /* Fila de equipo: el nombre ocupa todo el ancho y debajo van "Mi equipo" y "Participa" */
+    .teamRow{flex-wrap:wrap;row-gap:4px;column-gap:16px;margin-bottom:12px;}
+    .teamRow input[type=text]{flex:1 1 100%;min-width:0;}
+    .teamRow label{padding:6px 2px;font-size:.82rem;}
     .topbar h1{font-size:1.15rem;gap:9px;}
     .topbar .logo{width:48px;height:21px;}
 
@@ -333,6 +342,7 @@
   </fieldset>
 
   <button class="bigBtn" id="btnStartRace" onclick="startRace()">Comenzar regata</button>
+  <div class="appVersion" id="appVersionLabel"></div>
 </div>
 
 <!-- ================= RACE ================= -->
@@ -1592,6 +1602,22 @@ function exportExcel(){
 /* ============================================================
    INIT
    ============================================================ */
+/* ------------------------------------------------------------
+   VERSIÓN
+   El workflow de GitHub Actions sustituye estas dos líneas por el
+   hash del commit y la fecha de compilación. Abriendo el archivo en
+   local queda "desarrollo". Es el mismo hash que usa la caché del
+   service worker, así que sirve para comprobar qué versión se ejecuta.
+   ------------------------------------------------------------ */
+const APP_VERSION = 'desarrollo';
+const APP_BUILD = '';
+(function showVersion(){
+  const el = document.getElementById('appVersionLabel');
+  if(!el) return;
+  const fecha = APP_BUILD ? ' · ' + formatDateEs(APP_BUILD) : '';
+  el.innerHTML = 'Versión <b>' + escapeHtml(APP_VERSION) + '</b>' + escapeHtml(fecha);
+})();
+
 document.getElementById('inRaceDate').value = todayIso();
 onCoreChange();
 renderParcialList();

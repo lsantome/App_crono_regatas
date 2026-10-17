@@ -6,7 +6,10 @@
        Así se recibe la última versión al abrir con cobertura y
        la app sigue funcionando sin red.
      · Resto de archivos (iconos, manifest): caché primero.
-   Al publicar una versión nueva, cambia CACHE_VERSION.
+   CACHE_VERSION identifica la caché. Cada versión nueva debe
+   cambiarlo para que los usuarios reciban la actualización.
+   El despliegue por GitHub Actions lo sustituye automáticamente
+   por el hash del commit; si publicas a mano, súbelo tú.
    ============================================================ */
 const CACHE_VERSION = 'v1';
 const CACHE_NAME = 'regatas-' + CACHE_VERSION;

@@ -2,7 +2,7 @@
   "name": "Cronometraje de Regatas",
   "short_name": "Regatas",
   "description": "Cronometraje de regatas: tiempos por parcial, clasificación en directo, análisis y exportación a PDF y Excel.",
-  "id": "./",
+  "id": "regatas-cronometraje",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

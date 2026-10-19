@@ -435,6 +435,18 @@ let tickHandle = null;
 let wakeLock = null;
 
 /* ------------------------------------------------------------
+   APP ANDROID (Capacitor)
+   Dentro de la app nativa existe window.Capacitor (lo inyecta el
+   contenedor). En el navegador / PWA no existe y nada de esto actúa.
+   Se llama a los plugins con Capacitor.nativePromise, sin empaquetador,
+   para mantener esta web como un único archivo.
+   ------------------------------------------------------------ */
+const NATIVE = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform());
+function nativeCall(plugin, method, opts){
+  return window.Capacitor.nativePromise(plugin, method, opts || {});
+}
+
+/* ------------------------------------------------------------
    RELOJ MONÓTONO
    performance.now() no se ve afectado por ajustes del reloj del
    sistema (NTP, cambio manual de hora) durante la regata.
@@ -739,16 +751,18 @@ function maybeRestore(){
    Evita que el móvil apague la pantalla durante la regata.
    ============================================================ */
 async function requestWakeLock(){
+  if(NATIVE){ nativeCall('RegatasNative','keepAwake',{on:true}).catch(()=>{}); return; }
   if(!('wakeLock' in navigator)) return;
   try{ wakeLock = await navigator.wakeLock.request('screen'); }
   catch(e){ /* denegado o no disponible: no es crítico */ }
 }
 function releaseWakeLock(){
+  if(NATIVE){ nativeCall('RegatasNative','keepAwake',{on:false}).catch(()=>{}); return; }
   if(wakeLock){ try{ wakeLock.release(); }catch(e){} wakeLock = null; }
 }
 document.addEventListener('visibilitychange', ()=>{
   // El bloqueo se pierde al pasar a segundo plano: se vuelve a pedir al regresar
-  if(document.visibilityState === 'visible' && CFG && !wakeLock) requestWakeLock();
+  if(document.visibilityState === 'visible' && CFG && !wakeLock && !NATIVE) requestWakeLock();
 });
 
 /* ============================================================
@@ -1291,8 +1305,13 @@ function showToast(msg, ms){
    ============================================================ */
 const FS_KEY = 'regatas.pantallaCompleta';
 
-function fsElement(){ return document.fullscreenElement || document.webkitFullscreenElement || null; }
+let nativeFs = false;   // estado de la pantalla completa en la app Android (barras del sistema ocultas)
+function fsElement(){
+  if(NATIVE) return nativeFs ? document.documentElement : null;
+  return document.fullscreenElement || document.webkitFullscreenElement || null;
+}
 function fsSupported(){
+  if(NATIVE) return true;
   const d = document, e = d.documentElement;
   const enabled = d.fullscreenEnabled || d.webkitFullscreenEnabled;
   return !!enabled && !!(e.requestFullscreen || e.webkitRequestFullscreen);
@@ -1317,7 +1336,12 @@ function isTouchDevice(){
 function fsPref(){ try{ return localStorage.getItem(FS_KEY); }catch(e){ return null; } }
 function fsSavePref(v){ try{ localStorage.setItem(FS_KEY, v); }catch(e){} }
 
+async function nativeImmersive(on){
+  try{ await nativeCall('RegatasNative','immersive',{on:on}); nativeFs = on; }catch(e){}
+  updateFsButtons();
+}
 async function fsEnter(){
+  if(NATIVE){ await nativeImmersive(true); return true; }
   const el = document.documentElement;
   try{
     if(el.requestFullscreen) await el.requestFullscreen({navigationUI:'hide'});
@@ -1326,6 +1350,7 @@ async function fsEnter(){
   }catch(e){ return false; }   // denegado (sin gesto del usuario, política del navegador…)
 }
 async function fsExit(){
+  if(NATIVE){ await nativeImmersive(false); return; }
   try{
     if(document.exitFullscreen) await document.exitFullscreen();
     else if(document.webkitExitFullscreen) document.webkitExitFullscreen();
@@ -1363,6 +1388,9 @@ function initFullscreen(){
 
   ['fullscreenchange','webkitfullscreenchange'].forEach(ev=>document.addEventListener(ev, updateFsButtons));
   updateFsButtons();
+
+  // App Android: arranca a pantalla completa (barras ocultas) salvo que el usuario la haya desactivado con el botón
+  if(NATIVE){ nativeImmersive(fsPref() !== 'off'); return; }
 
   // Entrada automática: primer toque en pantallas táctiles, una sola vez por carga
   if(supported && isTouchDevice() && !isFullscreenDisplayMode() && fsPref() !== 'off'){
@@ -1513,6 +1541,15 @@ function exportPDF(){
     document.title = prevTitle;
     window.removeEventListener('afterprint', restore);
   });
+  if(NATIVE){
+    // El WebView de Android no implementa window.print(): se abre el diálogo
+    // de impresión del sistema (ahí está «Guardar como PDF»).
+    nativeCall('RegatasNative','print',{name: document.title}).catch(()=>{
+      showToast('No se pudo abrir la impresión del sistema.', 5000);
+    });
+    setTimeout(()=>{ document.title = prevTitle; }, 1500);
+    return;
+  }
   window.print();
 }
 
@@ -1724,9 +1761,24 @@ function exportFileName(cfg){
     .replace(/[^A-Za-z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,60) || 'regata';
   return 'Regata_'+base+'_'+cfg.raceDate+'.xlsx';
 }
+// App Android: el WebView no descarga blobs. Se guarda el archivo en la caché
+// de la app y se abre la hoja de compartir del sistema (Drive, Gmail, «Guardar en…»).
+async function saveExcelNative(bytes, fileName){
+  try{
+    let bin = '';
+    const CH = 0x8000;
+    for(let i=0; i<bytes.length; i+=CH) bin += String.fromCharCode.apply(null, bytes.subarray(i, i+CH));
+    const w = await nativeCall('Filesystem','writeFile',{path:fileName, data:btoa(bin), directory:'CACHE', recursive:true});
+    await nativeCall('Share','share',{title:fileName, dialogTitle:'Guardar o enviar el Excel', files:[w.uri]});
+  }catch(e){
+    // Cerrar la hoja de compartir sin elegir nada también llega aquí: no es un fallo
+    if(!/cancel/i.test(String(e && (e.message||e)))) showToast('No se pudo exportar el Excel: '+String(e && (e.message||e)), 7000);
+  }
+}
 function exportExcel(){
   if(!CFG) return;
   const bytes = buildXlsx(CFG, TEAMS);
+  if(NATIVE){ saveExcelNative(bytes, exportFileName(CFG)); return; }
   const blob = new Blob([bytes], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1755,6 +1807,23 @@ const APP_BUILD = '';
   el.innerHTML = 'Versión <b>' + escapeHtml(APP_VERSION) + '</b>' + escapeHtml(fecha);
 })();
 
+/* Botón «atrás» de Android. Lo invoca MainActivity.java; devuelve 'exit' para
+   cerrar la app o 'ok' si ya lo ha gestionado esta función. Durante la regata
+   exige pulsarlo dos veces para no salir por accidente en pleno cronometraje. */
+let backArmedAt = 0;
+window.__nativeBack = function(){
+  const visible = id => { const e = document.getElementById(id); return !!e && getComputedStyle(e).display !== 'none'; };
+  if(visible('screenAnalysis')){ closeAnalysis(); return 'ok'; }
+  if(visible('screenRace')){
+    const now = Date.now();
+    if(now - backArmedAt < 2500) return 'exit';
+    backArmedAt = now;
+    showToast('Pulsa atrás otra vez para salir', 2500);
+    return 'ok';
+  }
+  return 'exit';
+};
+
 initFullscreen();
 document.getElementById('inRaceDate').value = todayIso();
 onCoreChange();
@@ -1776,6 +1845,7 @@ function applyUpdate(){
   swWaiting.postMessage('SKIP_WAITING');
 }
 (function registerSW(){
+  if(NATIVE) return;   // en la app Android los archivos van dentro del paquete: sin service worker
   if(!('serviceWorker' in navigator)) return;
   const ok = location.protocol === 'https:' || ['localhost','127.0.0.1'].includes(location.hostname);
   if(!ok) return;

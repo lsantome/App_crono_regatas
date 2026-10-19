@@ -12,7 +12,13 @@
    por el hash del commit; si publicas a mano, súbelo tú.
    ============================================================ */
 const CACHE_VERSION = 'v1';
-const CACHE_NAME = 'regatas-' + CACHE_VERSION;
+// El almacenamiento (Cache Storage, localStorage…) es COMÚN a todas las apps del mismo
+// origen (p. ej. todos los repos de usuario.github.io). Por eso el prefijo es propio
+// y la limpieza solo toca cachés de esta app.
+const CACHE_PREFIX = 'regatas-cronometraje-';
+const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
+// Cachés de versiones anteriores de esta app, que usaban el prefijo antiguo «regatas-v1» / «regatas-<hash>»
+const LEGACY_CACHE = /^regatas-(v\d+|[0-9a-f]{7})$/;
 
 const PRECACHE = [
   './',
@@ -40,7 +46,7 @@ self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     const names = await caches.keys();
     await Promise.all(
-      names.filter(n => n.startsWith('regatas-') && n !== CACHE_NAME)
+      names.filter(n => (n.startsWith(CACHE_PREFIX) || LEGACY_CACHE.test(n)) && n !== CACHE_NAME)
            .map(n => caches.delete(n))
     );
     await self.clients.claim();

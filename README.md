@@ -5,7 +5,7 @@ en directo, análisis de puestos y diferencias, y exportación a PDF y Excel.
 
 Funciona sin conexión y se instala en el móvil como una app más.
 
-https://lsantome.github.io/App_crono_regatas/
+**URL de la app:** <https://lsantome.github.io/App_crono_regatas/>
 
 ## Contenido
 
@@ -29,7 +29,7 @@ app funciona igual; lo único que no hay en ese modo es instalación ni caché o
 3. En el repositorio: **Settings → Pages**.
 4. En *Build and deployment* → *Source*, elige **GitHub Actions**.
 5. Haz un push a `main`. El workflow se encarga del resto.
-6. La app queda en `https://<tu-usuario>.github.io/<repositorio>/`
+6. La app queda en `https://lsantome.github.io/App_crono_regatas/`
 
 La alternativa es elegir **Deploy from a branch** (rama `main`, carpeta `/ (root)`).
 Publica igual, pero sin las comprobaciones ni el sellado automático de versión que
@@ -125,3 +125,25 @@ análisis). En el móvil solo se ve el icono.
   PDF*, tamaño A4 y orientación horizontal.
 - El **Excel** es un archivo plano, una fila por equipo y parcial, con el nombre y la
   fecha de la regata en todas las filas, pensado para apilar regatas en un histórico.
+
+## Independencia respecto a otras PWA del mismo origen
+
+En GitHub Pages todos tus repos comparten origen (`usuario.github.io`). Para que esta
+app no se confunda con otras:
+
+- **`id` del manifest = `regatas-cronometraje`.** El navegador resuelve el `id` contra el
+  *origen*, no contra la carpeta: el valor anterior `"./"` equivalía a `https://usuario.github.io/`
+  y habría sido idéntico al de cualquier otra PWA tuya con `"./"` o `"/"`; el navegador las
+  trataría como la misma app (instalación, actualización de nombre/iconos…). El workflow
+  falla si el `id` vuelve a ser genérico.
+- **Cachés con prefijo propio** (`regatas-cronometraje-…`) y limpieza que solo borra las suyas.
+- **`scope` y `start_url`** siguen acotados a la carpeta del repo, y el service worker se
+  registra con ese mismo alcance.
+
+Límites: `localStorage` es común a todo el origen (las claves de esta app empiezan por
+`regatas.`; evita ese prefijo en otras apps). El aislamiento total de almacenamiento solo
+se consigue con un origen distinto (un dominio propio, o una cuenta/organización de GitHub
+aparte).
+
+Si ya tenías la app instalada con el `id` anterior, el navegador la verá como una app
+distinta: desinstala la antigua e instala de nuevo.

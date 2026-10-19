@@ -5,6 +5,8 @@ en directo, análisis de puestos y diferencias, y exportación a PDF y Excel.
 
 Funciona sin conexión y se instala en el móvil como una app más.
 
+https://lsantome.github.io/App_crono_regatas/
+
 ## Contenido
 
 ```

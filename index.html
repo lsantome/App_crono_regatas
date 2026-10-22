@@ -1011,7 +1011,8 @@ const AN_PALETTE = ['#5b8def','#c77dff','#f2b134','#5ec8d8','#e8735c','#8bd17c',
 function openAnalysis(){
   document.getElementById('screenRace').style.display = 'none';
   document.getElementById('screenAnalysis').style.display = 'flex';
-  renderAnalysis();
+  analysisLastHtml = null;      // al abrir se repinta siempre y se parte de la posición inicial
+  renderAnalysis(true);
   if(analysisTickHandle) clearInterval(analysisTickHandle);
   analysisTickHandle = setInterval(renderAnalysis, 1000);
 }
@@ -1223,7 +1224,8 @@ function renderAnalysisTable(data){
   return html;
 }
 
-function renderAnalysis(){
+let analysisLastHtml = null;
+function renderAnalysis(resetScroll){
   if(!CFG) return;
   const data = computeAnalysisData();
   const box = document.getElementById('analysisContent');
@@ -1231,7 +1233,18 @@ function renderAnalysis(){
   html += '<h3>Evolución de diferencia acumulada respecto a mi equipo</h3><div class="chartWrap">'+buildDiffChart(data)+'</div>';
   if(data.mine) html += buildLegend(data.activos.filter(t=>!t.esMio));
   html += '<h3>Tabla resumen</h3><div class="hint" style="margin:0 2px 8px">Toca "Equipo" o "Tiempo" de cualquier parcial para ordenar la tabla; vuelve a tocar para invertir el orden.</div>'+renderAnalysisTable(data);
+  // Se repinta cada segundo, pero el contenido solo cambia al registrarse un parcial u ordenar la tabla.
+  // Si es idéntico no se toca el DOM: así el scroll horizontal de gráficos y tablas no se interrumpe
+  // ni vuelve al inicio (reemplazar el DOM reinicia scrollLeft y corta el arrastre de la barra).
+  if(html === analysisLastHtml) return;
+  analysisLastHtml = html;
+  // Si cambia, se conserva la posición de scroll de cada gráfico y tabla (por orden de aparición).
+  const wraps = '.chartWrap, .analysisTableWrap';
+  const saved = resetScroll === true ? [] : Array.from(box.querySelectorAll(wraps)).map(el=>[el.scrollLeft, el.scrollTop]);
   box.innerHTML = html;
+  box.querySelectorAll(wraps).forEach((el,i)=>{
+    if(saved[i]){ el.scrollLeft = saved[i][0]; el.scrollTop = saved[i][1]; }
+  });
 }
 
 /* ============================================================

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Cronometraje de Regatas</string>
+    <string name="title_activity_main">Cronometraje de Regatas</string>
+    <string name="package_name">es.regatas.cronometraje</string>
+    <string name="custom_url_scheme">es.regatas.cronometraje</string>
+</resources>

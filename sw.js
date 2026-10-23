@@ -8,8 +8,8 @@
      · Resto de archivos (iconos, manifest): caché primero.
    CACHE_VERSION identifica la caché. Cada versión nueva debe
    cambiarlo para que los usuarios reciban la actualización.
-   El despliegue por GitHub Actions lo sustituye automáticamente
-   por el hash del commit; si publicas a mano, súbelo tú.
+   scripts/version.js (npm run build:pwa) lo sustituye
+   automáticamente por el hash del commit.
    ============================================================ */
 const CACHE_VERSION = 'v1';
 // El almacenamiento (Cache Storage, localStorage…) es COMÚN a todas las apps del mismo

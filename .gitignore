@@ -1,0 +1,25 @@
+# Dependencias y salidas de compilación
+node_modules/
+dist/
+build/
+.gradle/
+*.log
+
+# Firma de Android: NUNCA al repositorio (ver docs/ANDROID.md)
+*.keystore
+*.jks
+*.p12
+keystore.properties
+local.properties
+
+# Binarios de salida
+*.apk
+*.aab
+
+# Editores y sistema
+.idea/
+.DS_Store
+
+# Informes que Android Studio exporta por error en la carpeta del proyecto
+/script.js
+/styles.css

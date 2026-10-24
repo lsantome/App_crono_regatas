@@ -1,0 +1,14 @@
+{
+  "appId": "es.regatas.cronometraje",
+  "appName": "Cronometraje de Regatas",
+  "webDir": "dist/app",
+  "android": {
+    "allowMixedContent": false
+  },
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": { "launchShowDuration": 0 }
+  }
+}

@@ -1,0 +1,86 @@
+name: Pages (tests y publicación)
+
+# Cada push a main y cada PR ejecuta tests y construye el sitio.
+# Solo main lo publica en GitHub Pages. Requiere en Settings > Pages: Source = GitHub Actions.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Un despliegue a la vez. No se cancela el que esté en curso: cancelar a
+# medias puede dejar publicada una versión incompleta.
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v6
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Pruebas
+        run: npm test
+
+      - name: Construir el sitio (versión sellada)
+        run: npm run build:pwa
+
+      - name: Comprobar que no falta nada y que la versión está sellada
+        run: |
+          set -e
+          for f in index.html privacidad.html manifest.webmanifest sw.js \
+                   icons/icon-192.png icons/icon-512.png icons/icon-maskable-512.png \
+                   icons/apple-touch-icon.png icons/favicon-32.png; do
+            if [ ! -s "dist/site/$f" ]; then echo "::error::Falta o está vacío: $f"; exit 1; fi
+          done
+          node --check dist/site/sw.js
+          VERSION="$(node -p "require('./package.json').version")"
+          SHA7="${GITHUB_SHA::7}"
+          grep -q "^const APP_VERSION = '$VERSION';" dist/site/index.html \
+            || { echo "::error::APP_VERSION sin sellar en index.html"; exit 1; }
+          grep -q "^const APP_COMMIT = '$SHA7';" dist/site/index.html \
+            || { echo "::error::APP_COMMIT sin sellar en index.html"; exit 1; }
+          grep -q "^const CACHE_VERSION = '$SHA7';" dist/site/sw.js \
+            || { echo "::error::CACHE_VERSION sin sellar en sw.js"; exit 1; }
+          echo "Sitio correcto: v$VERSION · build $SHA7"
+
+      - name: Configurar Pages
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/configure-pages@v5
+
+      - name: Subir el sitio
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist/site
+
+  deploy:
+    # Las PR ejecutan todo lo anterior pero no publican.
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Desplegar en GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

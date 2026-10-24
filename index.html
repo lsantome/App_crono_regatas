@@ -1806,18 +1806,20 @@ function exportExcel(){
    ============================================================ */
 /* ------------------------------------------------------------
    VERSIÓN
-   El workflow de GitHub Actions sustituye estas dos líneas por el
-   hash del commit y la fecha de compilación. Abriendo el archivo en
-   local queda "desarrollo". Es el mismo hash que usa la caché del
-   service worker, así que sirve para comprobar qué versión se ejecuta.
+   scripts/version.js (build:pwa y build:android-web) sustituye estas tres
+   líneas por la versión de package.json, el hash del commit y la fecha
+   de compilación. Abriendo el archivo en local queda "desarrollo". El hash
+   es el mismo que usa la caché del service worker, así que sirve para
+   comprobar qué versión se ejecuta.
    ------------------------------------------------------------ */
 const APP_VERSION = 'desarrollo';
+const APP_COMMIT = '';
 const APP_BUILD = '';
 (function showVersion(){
   const el = document.getElementById('appVersionLabel');
   if(!el) return;
-  const fecha = APP_BUILD ? ' · ' + formatDateEs(APP_BUILD) : '';
-  el.innerHTML = 'Versión <b>' + escapeHtml(APP_VERSION) + '</b>' + escapeHtml(fecha);
+  if(APP_VERSION === 'desarrollo'){ el.innerHTML = 'Versión <b>desarrollo</b>'; return; }
+  el.innerHTML = '<b>v' + escapeHtml(APP_VERSION) + '</b> · build ' + escapeHtml(APP_COMMIT) + ' · ' + escapeHtml(APP_BUILD);
 })();
 
 /* Botón «atrás» de Android. Lo invoca MainActivity.java; devuelve 'exit' para

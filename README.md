@@ -1,11 +1,14 @@
-# Cronometraje de Regatas — PWA
+# Cronometraje de Regatas
 
 Aplicación para cronometrar regatas: tiempos por parcial, clasificación
 en directo, análisis de puestos y diferencias, y exportación a PDF y Excel.
 
-Funciona sin conexión y se instala en el móvil como una app más.
+Funciona sin conexión. Se usa de dos formas, con el mismo código:
 
-**URL de la app:** <https://lsantome.github.io/App_crono_regatas/>
+- **PWA** en GitHub Pages, instalable en el móvil como una app más.
+- **App Android** (APK/AAB, Capacitor) con la web empaquetada dentro.
+
+**URL de la PWA:** <https://lsantome.github.io/Crono-Regatas/>
 
 ## Contenido
 
@@ -13,54 +16,92 @@ Funciona sin conexión y se instala en el móvil como una app más.
 index.html               la aplicación completa (HTML + CSS + JS en un solo archivo)
 manifest.webmanifest     nombre, iconos y modo de presentación de la app instalada
 sw.js                    service worker: caché offline y aviso de versión nueva
+privacidad.html          política de privacidad (la pide Google Play)
 icons/                   iconos 192, 512, maskable, apple-touch y favicon
-.github/workflows/       despliegue automático con GitHub Actions
+capacitor.config.json    configuración de la app Android (appId, webDir)
+android/                 proyecto de Android Studio (Capacitor) y plugin nativo propio
+scripts/                 version.js, build-pwa.js, build-android-web.js, gradle.js
+tests/                   pruebas (npm test)
+docs/                    ANDROID.md y GUIA-PLAY-STORE.md
+store/                   icono, gráfico de funciones, capturas y textos de la ficha de Play
+.github/workflows/       pages.yml (tests y Pages) y android.yml (APK y AAB)
+package.json             versión (fuente única) y scripts · CHANGELOG.md · CLAUDE.md · LICENSE
 ```
 
 `index.html` es autónomo. Si lo abres directamente desde el disco (doble clic) la
 app funciona igual; lo único que no hay en ese modo es instalación ni caché offline.
+Sin compilar, el pie de la pantalla de configuración muestra *Versión desarrollo*.
+
+## Desarrollo
+
+Requisitos: Node 22 o superior. Para Android, además JDK 21 y el SDK de Android
+(ver [docs/ANDROID.md](docs/ANDROID.md)).
+
+| Comando | Qué hace |
+|---|---|
+| `npm ci` | Instala las dependencias (Capacitor), con las versiones del lock |
+| `npm test` | Ejecuta todas las pruebas |
+| `npm run build:pwa` | Genera `dist/site`, lo que se publica en Pages, con la versión sellada |
+| `npm run build:android-web` | Genera `dist/app`, la web que entra en el APK (sin service worker) |
+| `npm run android:sync` | `build:android-web` + `cap sync android` |
+| `npm run android:debug` | Sincroniza y compila un APK de depuración |
+| `npm run android:release` | Sincroniza y compila APK y AAB de release (firmados si hay claves) |
+
+La versión se sella al compilar: `v1.1.0 · build abc1234 · 2026-10-23` (versión de
+`package.json`, hash corto del commit y fecha). El mismo hash es la versión de la caché
+del service worker, y sirve para comprobar qué versión se está ejecutando.
 
 ## Publicar en GitHub Pages
 
-1. Crea un repositorio **público** en GitHub, por ejemplo `regatas`. Con cuenta
-   gratuita, Pages solo funciona en repositorios públicos.
-2. Sube estos archivos **a la raíz** del repositorio, conservando las carpetas
-   `icons/` y `.github/`.
-3. En el repositorio: **Settings → Pages**.
-4. En *Build and deployment* → *Source*, elige **GitHub Actions**.
-5. Haz un push a `main`. El workflow se encarga del resto.
-6. La app queda en `https://lsantome.github.io/App_crono_regatas/`
+La publicación es automática, pero hace falta un ajuste **una sola vez**:
 
-La alternativa es elegir **Deploy from a branch** (rama `main`, carpeta `/ (root)`).
-Publica igual, pero sin las comprobaciones ni el sellado automático de versión que
-se describen abajo, así que tendrías que subir `CACHE_VERSION` a mano en cada cambio.
+1. En el repositorio: **Settings → Pages**.
+2. En *Build and deployment* → *Source*, elige **GitHub Actions**.
+3. Haz un push a `main`. El workflow *Pages* se encarga del resto.
+4. La app queda en `https://lsantome.github.io/Crono-Regatas/`
+
+Con *Deploy from a branch* se publicaría el código sin compilar: sin versión sellada y
+sin las comprobaciones. No lo uses.
 
 ## Despliegue automático (GitHub Actions)
 
-`.github/workflows/deploy.yml` se ejecuta en cada push a `main` y también a mano
-desde la pestaña *Actions*. Hace tres cosas:
+`.github/workflows/pages.yml` se ejecuta en cada push a `main`, en cada PR y a mano
+desde la pestaña *Actions*. **Solo `main` publica**; las PR ejecutan todo lo demás.
 
-**Sella la versión.** Sustituye `CACHE_VERSION` del service worker por el hash
-corto del commit, así que cada despliegue genera una caché nueva y los usuarios
-reciben el aviso de actualización. Es el paso que, hecho a mano, se olvida.
-El mismo hash y la fecha de compilación se estampan en `index.html` y la app los
-muestra al pie de la pantalla de configuración (*Versión a1b2c3d · 17/10/2026*).
-Tras publicar un cambio, compara ese hash con el del último commit en GitHub: si
-coincide, el dispositivo tiene la versión nueva; si no, sigue con la anterior.
-Abriendo el HTML en local aparece *Versión desarrollo*.
-
-**Comprueba que no falta nada.** Verifica que están el HTML, el manifest, el
-service worker y los cinco iconos, y que ninguno está vacío.
-
-**Valida el código antes de publicar.** Extrae el `<script>` de `index.html` y lo
-pasa por `node --check`, hace lo mismo con `sw.js` y comprueba que el manifest es
-JSON válido con sus claves obligatorias. Si algo falla, el despliegue se detiene y
-la versión publicada sigue siendo la anterior.
-
-Solo se publica el contenido de `_site`: el HTML, el manifest, el service worker
-y los iconos. El README y la carpeta `.github/` no se suben al sitio.
+1. `npm ci` y `npm test`: sintaxis, manifest, service worker, ausencia de recursos
+   externos, claves de almacenamiento, build y coherencia de Android.
+2. `npm run build:pwa`: construye `dist/site` con la versión sellada.
+3. Comprueba que no falta ningún archivo, que `sw.js` compila y que la versión y el
+   hash del commit quedaron sellados.
+4. Publica `dist/site` en Pages. Si algo falla, el despliegue se detiene y la versión
+   publicada sigue siendo la anterior.
 
 Si el workflow falla, en la pestaña *Actions* aparece el paso concreto y el motivo.
+
+## App de Android
+
+La app lleva la web dentro y funciona sin conexión. **No comparte datos con la PWA**: son
+dos instalaciones distintas, cada una con su propio almacenamiento. El medio para pasar
+resultados de una a otra es el Excel exportado.
+
+- **APK de prueba:** *Actions → Android (APK y AAB) → Run workflow*. Al terminar, el APK
+  está en *Artifacts*. Sin claves de firma es un APK de depuración, válido para probar en
+  el móvil pero no para Play Store.
+- **Release firmada (APK y AAB):** al subir una etiqueta `vX.Y.Z`, con los secretos de
+  firma cargados. Se adjunta a la Release de GitHub.
+- **Instalar el APK:** pásalo al móvil y ábrelo; Android pedirá permitir instalar
+  desde esa fuente.
+- **Publicar en Google Play:** [docs/GUIA-PLAY-STORE.md](docs/GUIA-PLAY-STORE.md).
+
+Los cambios en la web (Pages) **no llegan solos** a la app instalada: cada cambio exige
+una versión nueva de la app.
+
+## Datos y privacidad
+
+Todo se guarda en el dispositivo (almacenamiento local del navegador o de la app). No
+hay cuentas, servidores ni analíticas. La política completa está en
+[privacidad.html](privacidad.html). Desinstalar la app o borrar sus datos elimina las
+regatas guardadas: exporta a Excel lo que quieras conservar.
 
 ## Instalar en el móvil
 
@@ -69,26 +110,28 @@ Si el workflow falla, en la pestaña *Actions* aparece el paso concreto y el mot
 - **iPhone/iPad (Safari):** botón Compartir → *Añadir a pantalla de inicio*.
   En iOS la instalación solo funciona desde Safari, no desde Chrome.
 
+- **App Android (APK):** ver «App de Android» más abajo. Es independiente de la PWA.
+
 Una vez instalada se abre a pantalla completa, sin barra de direcciones, y funciona
 sin cobertura. Conviene abrirla una vez con conexión antes de ir a la regata.
 
-## Publicar una versión nueva
+## Releases (publicar una versión nueva)
 
-Con GitHub Actions configurado, basta con subir el archivo cambiado a `main`:
-el despliegue y el número de versión de la caché se gestionan solos.
-
-Quien tenga la app abierta verá un aviso *"Hay una versión nueva"* con un botón
-**Actualizar**. La app nunca se recarga sola: si estás en plena regata puedes
-cerrar el aviso y seguir cronometrando.
-
-Si publicas sin Actions (modo *Deploy from a branch*), acuérdate de subir a mano
-el número de versión en `sw.js`:
-
-```js
-const CACHE_VERSION = 'v2';   // antes 'v1'
-```
-
-Si lo olvidas, los usuarios seguirán viendo la versión antigua guardada en caché.
+1. Cambia lo que haga falta en una rama y abre una PR hacia `main`. Las PR ejecutan los
+   tests y construyen el sitio, pero no publican.
+2. Para una versión: sube `version` en `package.json` (semver `X.Y.Z`) y añade su entrada
+   en `CHANGELOG.md`. Esa es la única fuente de versión: la web, la caché del service worker
+   y el `versionName`/`versionCode` de Android salen de ahí.
+3. Al hacer merge en `main`, GitHub Pages publica la web sola. Quien tenga la PWA abierta
+   verá un aviso *«Hay una versión nueva»* con un botón **Actualizar**; la app nunca se
+   recarga sola, así que en plena regata puedes cerrarlo y seguir cronometrando.
+4. Para generar la app Android: etiqueta `vX.Y.Z` (igual que `package.json`) y súbela:
+   ```bash
+   git tag v1.1.0
+   git push origin v1.1.0
+   ```
+   El workflow *Android* compila y adjunta APK y AAB a la Release de GitHub. Detalles en
+   [docs/ANDROID.md](docs/ANDROID.md).
 
 ## Pantalla completa
 
@@ -134,8 +177,8 @@ app no se confunda con otras:
 - **`id` del manifest = `regatas-cronometraje`.** El navegador resuelve el `id` contra el
   *origen*, no contra la carpeta: el valor anterior `"./"` equivalía a `https://usuario.github.io/`
   y habría sido idéntico al de cualquier otra PWA tuya con `"./"` o `"/"`; el navegador las
-  trataría como la misma app (instalación, actualización de nombre/iconos…). El workflow
-  falla si el `id` vuelve a ser genérico.
+  trataría como la misma app (instalación, actualización de nombre/iconos…). Las pruebas
+  (`npm test`) fallan si el `id` cambia o vuelve a ser genérico.
 - **Cachés con prefijo propio** (`regatas-cronometraje-…`) y limpieza que solo borra las suyas.
 - **`scope` y `start_url`** siguen acotados a la carpeta del repo, y el service worker se
   registra con ese mismo alcance.
@@ -147,3 +190,7 @@ aparte).
 
 Si ya tenías la app instalada con el `id` anterior, el navegador la verá como una app
 distinta: desinstala la antigua e instala de nuevo.
+
+## Licencia
+
+MIT. Ver [LICENSE](LICENSE).

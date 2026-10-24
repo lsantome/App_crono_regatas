@@ -1,0 +1,27 @@
+{
+  "name": "crono-regatas",
+  "version": "1.1.0",
+  "description": "Cronometraje de regatas: PWA en GitHub Pages y app Android (Capacitor)",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node tests/run.js",
+    "build:pwa": "node scripts/build-pwa.js",
+    "build:android-web": "node scripts/build-android-web.js",
+    "android:sync": "npm run build:android-web && cap sync android",
+    "android:debug": "npm run android:sync && node scripts/gradle.js assembleDebug",
+    "android:release": "npm run android:sync && node scripts/gradle.js assembleRelease bundleRelease"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/filesystem": "^8.1.5",
+    "@capacitor/share": "^8.0.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.3"
+  }
+}
